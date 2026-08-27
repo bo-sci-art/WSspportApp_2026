@@ -49,10 +49,19 @@
 
 <link rel="stylesheet" href="../../common/styles.css" />
 <style>
-  main.stage { padding: 0; }
+  /* 画面全体は固定。ヘッダー高さに依存せず、地図が残り高さを自動で埋める（固定値で引かない） */
+  html, body { height: 100%; overflow: hidden; }
+  body { display: flex; flex-direction: column; }
+  .ws-header { flex: 0 0 auto; }
+  main.stage {
+    flex: 1 1 auto;
+    min-height: 0;      /* flex子が縮めるように（内側スクロールを効かせる肝） */
+    padding: 0;
+    overflow: hidden;
+  }
   .frame-wrap {
     width: 100%;
-    height: calc(100dvh - 56px); /* ヘッダーぶん差し引き */
+    height: 100%;       /* main の高さいっぱい＝ヘッダー以外の全部 */
     overflow: hidden;
     background: #fff;
   }
@@ -60,6 +69,7 @@
     width: 100%;
     height: 100%;
     border: 0;
+    display: block;
   }
 </style>
 </head>

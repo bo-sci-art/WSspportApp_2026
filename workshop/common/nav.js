@@ -38,22 +38,26 @@ var mapBtnHtml = S.mapUrl
   ? '<button class="btn" id="mapBtn">🗺 地図</button>'
   : '';
 
-
   // ★★★ 体験ページ用：ステップインジケーターHTML生成 ★★★
   var stepperHtml = '';
   if (S.flow && S.flow.total > 0) {
     var dots = [];
     for (var i = 1; i <= S.flow.total; i++) {
-      var isDone = i <= S.flow.current;
+      var isCurrent = i === S.flow.current;
+      var isDone = i < S.flow.current;
       var label = S.flow.labels && S.flow.labels[i-1] ? S.flow.labels[i-1] : ('体験' + i);
+
+      var cls = 'ws-stepper__item' + (isDone ? ' done' : '') + (isCurrent ? ' current' : '') + (!isDone && !isCurrent ? ' todo' : '');
+      var mark = isDone ? '✓' : (isCurrent ? String(i) : String(i));
+
       dots.push(
-        '<div class="ws-stepper__item ' + (isDone ? 'done' : '') + '" title="' + label + '">' +
-          '<div class="ws-stepper__dot">' + (isDone ? '●' : '○') + '</div>' +
+        '<div class="' + cls + '" title="' + label + '" aria-current="' + (isCurrent ? 'step' : 'false') + '">' +
+          '<div class="ws-stepper__dot">' + mark + '</div>' +
           '<div class="ws-stepper__label">' + label + '</div>' +
         '</div>'
       );
     }
-    stepperHtml = '<div class="ws-stepper">' + dots.join('') + '</div>';
+    stepperHtml = '<div class="ws-stepper" role="list">' + dots.join('') + '</div>';
   }
 
   // ★★★ ヘッダー構造（体験ページ版） ★★★

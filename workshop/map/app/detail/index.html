@@ -1,87 +1,70 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>ArcGIS JavaScript Map</title>
-  
-  <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>ハザードマップ（対象区域の選定）</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
   <link rel="stylesheet" href="./style.css">
-  
 </head>
 <body>
-  <div id="viewDiv"></div>
 
-  <div id="control-panel">
-    <div id="hazard-content" class="tab-content">
-      <div id="hazard-filters">
-        <h3>表示するハザードマップ</h3>
-         <div class="filter-option" data-layer-title="gaisui_clip">
-          <span><input type="checkbox" id="gaisui-filter"><label for="gaisui-filter">川の水があふれる洪水（外水氾濫）</label></span>
-          <span class="reorder-buttons">
-            <button class="reorder-button" data-direction="up">▲</button>
-            <button class="reorder-button" data-direction="down">▼</button>
-          </span>
-        </div>
-        <div class="filter-option" data-layer-title="naisui_R7_clip">
-          <span><input type="checkbox" id="naisui-filter"><label for="naisui-filter">下水があふれる洪水（内水氾濫）</label></span>
-          <span class="reorder-buttons">
-            <button class="reorder-button" data-direction="up">▲</button>
-            <button class="reorder-button" data-direction="down">▼</button>
-          </span>
-        </div>
-        <div class="filter-option" data-layer-title="kyukeisha_R7_clip">
-          <span><input type="checkbox" id="kyukeisha-filter"><label for="kyukeisha-filter">土砂災害</label></span>
-          <span class="reorder-buttons">
-            <button class="reorder-button" data-direction="up">▲</button>
-            <button class="reorder-button" data-direction="down">▼</button>
-          </span>
-        </div>
-        <div class="filter-option" data-layer-title="takashio_clip">
-          <span><input type="checkbox" id="takashio-filter"><label for="takashio-filter">高潮（浸水深）</label></span>
-          <span class="reorder-buttons">
-            <button class="reorder-button" data-direction="up">▲</button>
-            <button class="reorder-button" data-direction="down">▼</button>
-          </span>
-        </div>
-        <div class="filter-option" data-layer-title="tsunami_clip">
-          <span><input type="checkbox" id="tsunami-filter"><label for="tsunami-filter">津波（浸水深、慶長型地震）</label></span>
-          <span class="reorder-buttons">
-            <button class="reorder-button" data-direction="up">▲</button>
-            <button class="reorder-button" data-direction="down">▼</button>
-          </span>
-        </div>
-        <div class="filter-option" data-layer-title="jishindo_clip">
-          <span><input type="checkbox" id="jishindo-filter"><label for="jishindo-filter">震度情報（元禄型関東地震）</label></span>
-          <span class="reorder-buttons">
-            <button class="reorder-button" data-direction="up">▲</button>
-            <button class="reorder-button" data-direction="down">▼</button>
-          </span>
-        </div>
-        <div class="filter-option" data-layer-title="shoshitsu_clip">
-          <span><input type="checkbox" id="shoshitsu-filter"><label for="shoshitsu-filter">地震火災（元禄型関東地震）</label></span>
-          <span class="reorder-buttons">
-            <button class="reorder-button" data-direction="up">▲</button>
-            <button class="reorder-button" data-direction="down">▼</button>
-          </span>
-        </div>
-        <div class="filter-option" data-layer-title="ekijyouka_clip">
-          <span><input type="checkbox" id="ekijyouka-filter"><label for="ekijyouka-filter">地盤の液状化（元禄型関東地震）</label></span>
-          <span class="reorder-buttons">
-            <button class="reorder-button" data-direction="up">▲</button>
-            <button class="reorder-button" data-direction="down">▼</button>
-          </span>
-        </div>
+<!-- 左：操作パネル -->
+<div id="sidebar">
+  <div class="side-scroll">
+    <!-- 災害種フィルタ -->
+    <div class="filter-label" style="margin-top:2px">災害の種類</div>
+    <div class="filter-chips">
+      <button class="chip active" data-cat="all">すべて</button>
+      <button class="chip" data-cat="mizu">水害</button>
+      <button class="chip" data-cat="jiban">地盤</button>
+      <button class="chip" data-cat="jishin">地震</button>
+    </div>
+
+    <!-- 水害 -->
+    <div class="hazard-group hg-mizu" data-cat="mizu">
+      <div class="hg-head">水害</div>
+      <div class="hg-body">
+        <div class="fopt"><input type="checkbox" id="chk-flood_l2"><label for="chk-flood_l2">洪水（外水氾濫）</label><button class="info-btn" data-k="flood_l2">?</button></div>
+        <div class="fopt"><input type="checkbox" id="chk-tsunami"><label for="chk-tsunami">津波</label><button class="info-btn" data-k="tsunami">?</button></div>
+        <div class="fopt"><input type="checkbox" id="chk-hightide"><label for="chk-hightide">高潮</label><button class="info-btn" data-k="hightide">?</button></div>
       </div>
     </div>
-  </div>
 
-  <div id="basemap-toggle">
-    <button id="white-map-btn" class="basemap-btn active">白地図</button>
-    <button id="satellite-btn" class="basemap-btn">衛星画像</button>
-  </div>
+    <!-- 地盤 -->
+    <div class="hazard-group hg-jiban" data-cat="jiban">
+      <div class="hg-head">地盤</div>
+      <div class="hg-body">
+        <div class="fopt"><input type="checkbox" id="chk-kyukei"><label for="chk-kyukei">土砂災害（急傾斜地の崩壊）</label><button class="info-btn" data-k="kyukei">?</button></div>
+        <div class="fopt"><input type="checkbox" id="chk-swale"><label for="chk-swale">液状化に関わる低地</label><button class="info-btn" data-k="swale">?</button></div>
+      </div>
+    </div>
 
-  <script src="https://js.arcgis.com/4.29/"></script>
-  <script src="./script.js"></script>
+    <!-- 地震 -->
+    <div class="hazard-group hg-jishin" data-cat="jishin">
+      <div class="hg-head">地震</div>
+      <div class="hg-body">
+        <a class="ext-link" href="https://wwwm.city.yokohama.lg.jp/yokohama/yokohama/Content/pages/links/6_bosai/links.html" target="_blank" rel="noopener">
+          🔗 わいわい防災マップ（横浜市）で見る
+          <small>震度・地震火災（延焼）などは横浜市の防災マップへ（外部サイト）</small>
+        </a>
+      </div>
+    </div>
+
+    <!-- 凡例・説明 -->
+    <div class="filter-label" style="margin-top:16px">凡例・説明</div>
+    <div id="legend-box"><div class="legend-empty">災害を選ぶと、説明と凡例が表示されます</div></div>
+  </div>
+</div>
+
+<!-- 地図 -->
+<div id="map-area">
+  <div id="viewDiv"></div>
+  <div id="basemap-toggle"><button id="bm-white" class="active">白地図</button><button id="bm-sat">衛星画像</button></div>
+  <div class="attr">出典：<a href="https://disaportal.gsi.go.jp/" target="_blank" rel="noopener">国土地理院</a>（地理院タイル／重ねるハザードマップ）</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="./script.js"></script>
 </body>
 </html>
