@@ -370,32 +370,6 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          139.6861127957272,
-          35.60405947129866
-        ]
-      },
-      "properties": {
-        "id": "31",
-        "field_23": null,
-        "field_24": "土砂災害マップ",
-        "field_25": "おくら",
-        "Message": "土の表情",
-        "collage": "住民が普段から危険性を意識すること",
-        "Mabling": "土砂災害の危険",
-        "hazard": null,
-        "target": "みんなへ",
-        "creationDate": "2025-10-25",
-        "images": [
-          "images/31_1.jpg"
-        ],
-        "status": "approved"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
           139.64441507623852,
           35.545698726144856
         ]
