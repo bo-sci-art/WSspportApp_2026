@@ -156,8 +156,45 @@ if (clearAllBtn) {
     refreshUndoRedo();
   });
 }
+// ===== 作品画像を投稿ページ用にlocalStorageへ保存（自動投稿の下準備） =====
+function persistArtworkImage(quality, maxDim) {
+  quality = quality || 0.85;
+  maxDim = maxDim || 1400;
+  try {
+    const prevSel = selectedIndex;
+    selectedIndex = -1;
+    render();
+
+    const srcW = canvas.width, srcH = canvas.height;
+    const scale = Math.min(1, maxDim / Math.max(srcW, srcH));
+    const outW = Math.max(1, Math.round(srcW * scale));
+    const outH = Math.max(1, Math.round(srcH * scale));
+
+    const off = document.createElement('canvas');
+    off.width = outW;
+    off.height = outH;
+    const octx = off.getContext('2d');
+    octx.fillStyle = '#ffffff';
+    octx.fillRect(0, 0, outW, outH);
+    octx.drawImage(canvas, 0, 0, srcW, srcH, 0, 0, outW, outH);
+
+    const dataURL = off.toDataURL('image/jpeg', quality);
+    localStorage.setItem('artworkImage', dataURL);
+    localStorage.setItem('artworkImageExt', 'jpg');
+
+    selectedIndex = prevSel;
+    render();
+    return true;
+  } catch (e) {
+    console.error('作品画像の保存(localStorage)に失敗しました:', e);
+    return false;
+  }
+}
+
 if (saveWorkBtn) {
   saveWorkBtn.addEventListener('click', () => {
+    persistArtworkImage();
+
     // 選択枠を一時非表示でレンダリング
     const prevSel = selectedIndex;
     selectedIndex = -1;
@@ -846,6 +883,8 @@ canvas.addEventListener('pointerup', (ev)=>{
 const saveBtn = document.getElementById('saveBtn');
 if (saveBtn) {
   saveBtn.addEventListener('click', () => {
+    persistArtworkImage();
+
     // 選択枠を含めずに書き出したい場合：一時的に選択解除で描画→出力→元に戻す
     const prevSel = selectedIndex;
     selectedIndex = -1;

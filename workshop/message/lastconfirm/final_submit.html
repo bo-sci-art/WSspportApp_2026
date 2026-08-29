@@ -55,6 +55,17 @@
                 <h2 class="step-title">Step 1: あなたの入力内容</h2>
             </div>
             
+            <!-- 作品プレビュー（コラージュ保存時に localStorage へ保存された画像） -->
+            <div class="artwork-preview-card">
+                <h3 class="artwork-preview-label">🖼️ あなたの作品</h3>
+                <div class="artwork-preview-frame">
+                    <img id="artwork-preview-img" alt="あなたの作品" style="display:none;">
+                    <div id="artwork-preview-empty" class="artwork-preview-empty" style="display:none;">
+                        まだ作品画像が見つかりません。コラージュのページで「保存」すると、ここに表示されます。
+                    </div>
+                </div>
+            </div>
+
             <div class="summary-grid">
                 <div class="summary-card">
                     <h3 class="summary-label">🗺️ 対象地点</h3>
@@ -89,78 +100,44 @@
             </div>
         </section>
 
-        <!-- Step 3: Survey123 Submission -->
+        <!-- Step 2: 作品を登録する -->
         <section class="step-section" id="step-survey">
             <div class="step-header">
                 <div class="step-icon">📤</div>
-                <h2 class="step-title">Step 2: Survey123で送信</h2>
+                <h2 class="step-title">Step 2: 登録する</h2>
             </div>
 
             <div class="survey-instructions">
                 <h3 class="instructions-title">送信の手順</h3>
                 <ol class="instructions-list">
-                    <li>下の「Survey123を開く」ボタンをクリック</li>
-                    <li>入力内容が自動で反映されていることを確認</li>
-                    <li>作品画像をアップロード</li>
-                    <li>内容を最終確認</li>
-                    <li>Survey123画面の「送信」ボタンをクリック</li>
+                    <li>上の入力内容を確認</li>
+                    <li>下の「登録する」ボタンをクリック</li>
+                    <li>自動的に防災行動マップに反映されます（画面が切り替わるまでそのままお待ちください）</li>
                 </ol>
             </div>
 
-            <!-- Survey123で手入力が必要な項目（注意） -->
-            <div class="alert-card warning" id="survey-manual-note">
-            <div class="alert-icon">⚠️</div>
-            <div class="alert-content">
-                <h3 class="alert-title">この3点はSurvey123で手入力してください</h3>
-                <ul class="missing-list" id="manual-items-list">
-                <li>作品制作日（Survey123内で入力）</li>
-                <li>ハザードマップ（複数選択の場合、足りない分を追記）</li>
-                <li>作品画像のアップロード（添付から追加）</li>
-                </ul>
-                <p class="info-note">
-                ※このページで入力しても自動反映されないため、Survey123のフォーム内で入力してください。
-                </p>
-            </div>
+            <!-- 作品画像が見つからない場合の注意 -->
+            <div class="alert-card warning" id="image-missing-alert" style="display:none;">
+                <div class="alert-icon">⚠️</div>
+                <div class="alert-content">
+                    <h3 class="alert-title">作品画像が見つかりません</h3>
+                    <p class="info-note">
+                        コラージュのページで「保存」操作を行うと、作品画像が自動的にこのページへ引き継がれます。まだの場合はコラージュのページに戻ってください。
+                    </p>
+                    <div class="action-section" style="margin-top:0.75rem;">
+                        <button class="btn btn-secondary" onclick="navigateToPage('collage')" type="button">コラージュのページへ</button>
+                    </div>
+                </div>
             </div>
 
             <!-- Action Buttons -->
             <div class="action-section">
-                <button class="btn btn-large btn-primary" onclick="openSurvey123()" id="btn-open-survey">
-                    📝 Survey123を開く →
+                <button class="btn btn-large btn-primary" onclick="submitArtwork()" id="btn-submit-artwork" type="button">
+                    📤 登録する →
                 </button>
             </div>
 
-            <!-- Survey123 Iframe Container -->
-            <div id="survey-container" class="survey-container" style="display: none;">
-                <div class="survey-header">
-                    <div>
-                        <h3>📝 Survey123 - 作品登録フォーム</h3>
-                        <p class="survey-note">入力内容が自動で反映されています。確認後、画面下の「送信」ボタンをクリックしてください。</p>
-                    </div>
-                    <button class="btn-close" onclick="closeSurvey()">✕ 閉じる</button>
-                </div>
-                <div class="iframe-wrapper">
-                    <iframe 
-                        id="survey-iframe" 
-                        frameborder="0" 
-                        allowfullscreen
-                        allow="geolocation; camera; microphone"
-                    ></iframe>
-                </div>
-            </div>
-
-            <!-- Completion Confirmation -->
-            <div class="completion-check" id="completion-check" style="display:none;">
-                <div class="check-card">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="checkbox-submitted" onchange="handleCompletionCheck()">
-                        <span class="checkbox-text">
-                            ✅ Survey123で「送信」ボタンを押して、送信が完了しました
-                        </span>
-                    </label>
-                    <p class="check-help">送信が完了したら、上のチェックボックスにチェックを入れてください</p>
-                </div>
-            </div>
+            <div id="submit-status" class="submit-status" style="display:none;"></div>
         </section>
 
         <!-- Step 4: Completion Message (hidden until checkbox is checked) -->
@@ -185,6 +162,6 @@
     </div>
 
     <!-- Scripts -->
-    <script src="./final_submit_script.js?v=2.0.0"></script>
+    <script src="./final_submit_script.js?v=3.0.0"></script>
 </body>
 </html>

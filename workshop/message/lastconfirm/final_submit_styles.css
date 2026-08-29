@@ -811,3 +811,81 @@ body {
 .survey-container {
     animation: fadeIn 0.4s ease;
 }
+
+/* =====================================
+   Submit Status (Worker送信の進捗/エラー表示)
+   ===================================== */
+.submit-status {
+    max-width: 640px;
+    margin: 1rem auto 0;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.submit-status.info {
+    background: #e7f5fe;
+    border: 2px solid var(--color-info);
+    color: var(--color-secondary);
+}
+
+.submit-status.error {
+    background: var(--color-notice);
+    border: 2px solid var(--color-notice-border);
+    color: var(--color-secondary);
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* =====================================
+   作品プレビュー（最終確認の一番上）
+   ===================================== */
+.artwork-preview-card {
+    background: var(--color-bg-secondary, #fff);
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08));
+    padding: 1rem 1.25rem 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.artwork-preview-label {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0 0 0.75rem;
+    color: var(--color-secondary, #334155);
+}
+
+.artwork-preview-frame {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: repeating-conic-gradient(#f3f4f6 0% 25%, #ffffff 0% 50%) 50% / 24px 24px;
+    border-radius: var(--radius-md, 12px);
+    border: 1px solid var(--color-border, #e5e7eb);
+    padding: 0.75rem;
+    min-height: 220px;
+}
+
+#artwork-preview-img {
+    max-width: 100%;
+    max-height: 480px;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+    object-fit: contain;
+}
+
+.artwork-preview-empty {
+    color: #6b7280;
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 2rem 1rem;
+    line-height: 1.6;
+}
