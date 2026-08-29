@@ -624,6 +624,30 @@
         ],
         "status": "approved"
       }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.6386783596414,
+          35.53695041330998
+        ]
+      },
+      "properties": {
+        "id": "55",
+        "field_23": null,
+        "field_24": "土砂災害マップ, 川の水があふれる洪水(外水氾濫)",
+        "field_25": "cz",
+        "Message": "cz",
+        "collage": "f",
+        "Mabling": "test",
+        "creationDate": "2026-08-29",
+        "images": [
+          "images/55_1.jpg"
+        ],
+        "status": "approved"
+      }
     }
   ]
 }
