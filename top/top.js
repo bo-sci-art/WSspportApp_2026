@@ -271,7 +271,7 @@ document.getElementById("createBtn")?.addEventListener("click", () => {
 // ✅ ポップアップの選択肢
 withAccount?.addEventListener("click", () => {
   choicePopup?.classList.remove("show");
-  window.location.href = "/top/register.html";
+  window.location.href = "top/register.html";
 });
 withoutAccount?.addEventListener("click", () => {
   choicePopup?.classList.remove("show");
@@ -279,7 +279,7 @@ withoutAccount?.addEventListener("click", () => {
 });
 proceedGuest?.addEventListener("click", () => {
   confirmPopup?.classList.remove("show");
-  window.location.href = "/WSsupportApp_202601/workshop/intro/index.html";
+  window.location.href = "workshop/intro/index.html";
 });
 closeChoicePopup?.addEventListener("click", () => {
   choicePopup?.classList.remove("show");
@@ -317,7 +317,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 document.getElementById("goRegister")?.addEventListener("click", () => {
-  window.location.href = "register.html";
+  window.location.href = "top/register.html";
 });
 
 // 「作品制作をする」クリックでログインフォーム表示
@@ -395,11 +395,11 @@ async function updateUserUI(user) {
   userNav.innerHTML = `
     <div class="header-user" id="userIcon">👤${nickname}さん</div>
     <button id="logoutBtn" class="header-btn logout">ログアウト</button>
-    <a href=".gp/gp.html?school=${encodeURIComponent(
+    <a href="gp/index.html?school=${encodeURIComponent(
       school
     )}" class="header-btn">${school}ご近所さんアートチャット</a>
     <a href="map/index.html" class="header-btn">防災行動マップ</a>
-    <a href="/WSsupportApp_202601/workshop/intro/index.html" class="header-btn highlight-btn">作品制作</a>
+    <a href="workshop/intro/index.html" class="header-btn highlight-btn">作品制作</a>
   `;
 
   // 🔹ログアウトボタンのバインド
