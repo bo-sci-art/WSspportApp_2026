@@ -254,19 +254,23 @@ document.addEventListener("DOMContentLoaded", function () {
   }
   function renderResControls(container, pick, hz){
     if(!container) return;
+    container.style.display = "block"; // 親の中央寄せflexを解除して崩れ防止
     const hazNote = hz.labels.length
       ? '避難場所は「'+hz.labels.join('・')+'」に対応する場所を表示しています。'
       : '避難場所を表示しています。';
-    let html='<div style="font-size:.8em;color:#666;margin-bottom:6px;line-height:1.5;">'+hazNote+'<br>ピン周辺の防災資源を表示/非表示できます。</div>';
+    let toggles='';
     Object.keys(RES_STYLE).forEach(k=>{
       const st=RES_STYLE[k];
-      html+='<div class="hazard-check-item">'
+      toggles+='<label class="res-toggle" for="chk-res-'+k+'">'
         +'<input type="checkbox" id="chk-res-'+k+'" checked>'
-        +'<label for="chk-res-'+k+'"><span style="display:inline-block;width:15px;height:15px;border-radius:50%;background:'+st.color+';color:#fff;font-size:9px;line-height:15px;text-align:center;vertical-align:middle;margin-right:5px;">'+st.glyph+'</span>'+st.label+'（'+pick[k].length+'）</label>'
-        +'</div>';
+        +'<span class="res-badge" style="background:'+st.color+'">'+st.glyph+'</span>'
+        +'<span>'+st.label+'（'+pick[k].length+'）</span>'
+        +'</label>';
     });
-    html+='<div style="font-size:.68em;color:#aaa;margin-top:8px;line-height:1.4;">出典: 指定緊急避難場所（国土地理院）／地域防災拠点・災害時給水所（横浜市オープンデータ, CC BY 4.0）</div>';
-    container.innerHTML=html;
+    container.innerHTML =
+        '<div class="res-note">'+hazNote+'<br>ピン周辺の防災資源を表示/非表示できます。</div>'
+      + '<div class="res-toggle-row">'+toggles+'</div>'
+      + '<div class="res-source">出典: 指定緊急避難場所（国土地理院）／地域防災拠点・災害時給水所（横浜市オープンデータ, CC BY 4.0）</div>';
     Object.keys(RES_STYLE).forEach(k=>{
       const cb=document.getElementById("chk-res-"+k);
       if(!cb) return;

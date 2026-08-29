@@ -1743,3 +1743,27 @@ html, body {
   text-align: left;      /* 左寄せ */
   font-family: "Yu Mincho", serif; /* 明朝体で手紙っぽく */
 }
+/* ===== Leaflet移行 追加分（detail） ===== */
+#surrounding-map, #nearby-map-view { width:100%; height:100%; min-height:300px; }
+.map-wrapper { position:relative; }
+.leaflet-container { font-family:inherit; background:#dfe6ee; }
+.art-pin{ background:none;border:none; }
+.art-pin svg{ display:block; filter:drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
+.num-pin{ background:none;border:none; }
+
+/* ===== STEP2 防災資源トグル（レイアウト整理） ===== */
+#step2-resource-check-area { text-align:left; }
+.res-note { font-size:.8em; color:#666; line-height:1.5; margin-bottom:6px; }
+.res-toggle-row { display:flex; flex-wrap:wrap; gap:6px 8px; justify-content:flex-start; }
+.res-toggle { display:inline-flex; align-items:center; gap:5px; background:#fff; border:1px solid #ccc; border-radius:20px; padding:5px 10px; font-size:.8em; cursor:pointer; white-space:nowrap; }
+.res-toggle:hover { border-color:var(--main-color); background:#fff5f2; }
+.res-toggle input { margin:0; }
+.res-badge { display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; color:#fff; font-size:9px; line-height:1; }
+.res-source { font-size:.68em; color:#aaa; margin-top:8px; line-height:1.4; }
+
+/* ===== STEP2完了ボタン到達性：地図を固定高＋必要時スクロール ===== */
+.interaction-panel { overflow: visible; }
+.split-layout-container { height: auto; min-height: 100%; }
+.verification-box-container { flex: 0 0 auto; }
+.map-wrapper { flex: 0 0 auto; height: 300px; min-height: 300px; }
+.right-column { overflow-y: auto; }
