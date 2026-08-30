@@ -114,3 +114,62 @@ document.querySelectorAll(".chip").forEach(c => {
     });
   };
 });
+
+/* ===== 周辺の防災資源（避難場所・拠点・給水所）※既定は非表示・トグルで表示 ===== */
+const RES_DATA_BASE = "https://raw.githubusercontent.com/bo-sci-art/WSspportApp_2026/main/data";
+const RES_DEFS = {
+  shelters: { file:"bousai_shelters.geojson", color:"#2e9e5b", label:"指定緊急避難場所" },
+  bases:    { file:"bousai_bases.geojson",    color:"#2f6fb0", label:"地域防災拠点" },
+  water:    { file:"bousai_water.geojson",    color:"#0f9bb5", label:"災害時給水所" }
+};
+const resLayers = { shelters:null, bases:null, water:null };
+
+(function initResources(){
+  const keys = Object.keys(RES_DEFS);
+  Promise.all(keys.map(function(k){
+    return fetch(RES_DATA_BASE + "/" + RES_DEFS[k].file)
+      .then(function(r){ if(!r.ok) throw new Error(RES_DEFS[k].file + " " + r.status); return r.json(); })
+      .then(function(gj){ return { k:k, features:(gj.features||[]) }; });
+  })).then(function(results){
+    const counts = {};
+    results.forEach(function(res){
+      const def = RES_DEFS[res.k];
+      const grp = L.layerGroup();
+      res.features.forEach(function(f){
+        const c = f.geometry && f.geometry.coordinates;
+        if (!c) return;
+        const p = f.properties || {};
+        const extra = (res.k === "water" && p.kind) ? "<br>種別: " + p.kind : "";
+        L.circleMarker([c[1], c[0]], { radius:5, color:"#fff", weight:1.5, fillColor:def.color, fillOpacity:.9 })
+          .bindPopup("<b>" + def.label + "</b><br>" + (p.name||"") + extra + (p.address ? "<br>" + p.address : ""))
+          .addTo(grp);
+      });
+      resLayers[res.k] = grp;   // 既定は地図に載せない
+      counts[res.k] = res.features.length;
+    });
+    renderResourceToggles(counts);
+  }).catch(function(err){
+    console.error("防災資源の読込に失敗", err);
+    const el = document.getElementById("resource-toggles");
+    if (el) el.innerHTML = '<div style="font-size:.78em;color:#999">防災資源データを読み込めませんでした（データ公開後に表示されます）。</div>';
+  });
+})();
+
+function renderResourceToggles(counts){
+  const el = document.getElementById("resource-toggles");
+  if (!el) return;
+  el.innerHTML = Object.keys(RES_DEFS).map(function(k){
+    const def = RES_DEFS[k];
+    return '<label class="res-toggle"><input type="checkbox" data-res="'+k+'">'
+      + '<span class="res-dot" style="background:'+def.color+'"></span>'
+      + def.label + '（' + (counts[k]||0) + '）</label>';
+  }).join("");
+  el.querySelectorAll('input[data-res]').forEach(function(cb){
+    cb.addEventListener('change', function(e){
+      const k = e.target.getAttribute('data-res');
+      if (!resLayers[k]) return;
+      if (e.target.checked) resLayers[k].addTo(map);
+      else map.removeLayer(resLayers[k]);
+    });
+  });
+}

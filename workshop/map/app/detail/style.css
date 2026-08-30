@@ -59,3 +59,17 @@ body{display:flex;height:100%;overflow:hidden;background:var(--base-color);color
 #basemap-toggle button.active{background:var(--main-color);color:#fff}
 .attr{position:absolute;right:8px;bottom:4px;z-index:600;font-size:10px;color:#667;background:rgba(255,255,255,.7);padding:2px 6px;border-radius:4px}
 .attr a{color:var(--sub-color)}
+
+/* ===== 周辺の防災資源 ===== */
+.res-toggles{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.res-toggle{display:flex;align-items:center;gap:7px;font-size:.82em;cursor:pointer}
+.res-toggle input{accent-color:var(--main-color);width:15px;height:15px;flex:none;cursor:pointer}
+.res-dot{display:inline-block;width:12px;height:12px;border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15);flex:none}
+.res-legend{display:flex;flex-direction:column;gap:8px}
+.res-item{display:flex;align-items:flex-start;gap:8px}
+.res-badge{flex:none;width:22px;height:22px;border-radius:50%;color:#fff;font-size:.72em;display:inline-flex;align-items:center;justify-content:center;margin-top:2px}
+.res-text{font-size:.8em;line-height:1.5;color:#445}
+.res-text b{color:#223}
+.res-desc{display:block;color:#667}
+.res-note{font-size:.76em;color:#6a5a1e;background:#fff8e6;border:1px solid #f0e2b8;border-radius:6px;padding:6px 8px;line-height:1.5}
+.res-source{font-size:.66em;color:#aaa;line-height:1.4}
