@@ -672,6 +672,30 @@
         ],
         "status": "approved"
       }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.62667132820354,
+          35.5303814145075
+        ]
+      },
+      "properties": {
+        "id": "57",
+        "field_23": null,
+        "field_24": "川の水があふれる洪水(外水氾濫)",
+        "field_25": "テスト",
+        "Message": "テスト",
+        "collage": "テスト",
+        "Mabling": "テスト",
+        "creationDate": "2026-08-30",
+        "images": [
+          "images/57_1.jpg"
+        ],
+        "status": "approved"
+      }
     }
   ]
 }
