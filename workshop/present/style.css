@@ -826,3 +826,36 @@ html, body {
   box-shadow: 0 2px 5px rgba(0,0,0,0.15); /* 影をつけて立体的に */
   border: 1px solid #fff; /* 白いフチでポップに */
 }
+/* ===== Leaflet移行 追加分 ===== */
+#viewDiv{width:100%;height:100%;}
+.leaflet-container{background:#dfe6ee;font-family:inherit;}
+.addressee-tip{background:rgba(255,255,255,.95);border:1px solid rgba(0,121,193,.5);border-radius:6px;padding:2px 8px;font-weight:bold;font-size:12px;color:#333;box-shadow:0 1px 4px rgba(0,0,0,.2);white-space:nowrap;}
+.addressee-tip.leaflet-tooltip-bottom:before,.addressee-tip.leaflet-tooltip-top:before{display:none;}
+/* 凡例(地図側から流用) */
+#legend-container .legend-item{margin-bottom:14px;}
+#legend-container .lg-name{font-weight:bold;margin-bottom:4px;color:#4A4A4A;}
+#legend-container .lg-desc{font-size:.82em;line-height:1.65;color:#666;margin-bottom:6px;}
+#legend-container .lg-css-row{display:flex;align-items:center;gap:8px;font-size:.85em;margin:3px 0;}
+#legend-container .lg-swatch{width:16px;height:16px;border-radius:3px;display:inline-block;border:1px solid #ccc;}
+#legend-container img{max-width:100%;}
+#legend-container .legend-empty{color:#999;font-size:.85em;}
+/* 「?」情報ボタン */
+.haz-info{margin-left:auto;width:22px;height:22px;border-radius:50%;border:1px solid #ccc;background:#fff;color:#888;font-weight:bold;cursor:pointer;flex:none;}
+.filter-option{display:flex;align-items:center;}
+/* 災害種チップの色ドット */
+.cat-dot{width:12px;height:12px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle;border:2px solid #fff;box-shadow:0 0 0 1px #bbb;}
+/* 3Dボタン(準備中) */
+#3d-btn.disabled{opacity:.45;cursor:not-allowed;}
+/* 地震グループの外部リンク */
+.ext-link{display:block;padding:10px 12px;background:#f4f1e9;border-radius:8px;color:#4f8b80;font-weight:bold;text-decoration:none;font-size:.9em;line-height:1.5;}
+.ext-link small{display:block;color:#999;font-weight:normal;font-size:.8em;margin-top:3px;}
+
+/* ===== パネルを地図の上に確実に出す（Leaflet移行の重なり修正） ===== */
+#control-panel{ position:fixed !important; z-index:2000 !important; transform:translateZ(0); }
+#menu-btn{ z-index:1100 !important; }
+#bottom-left-controls{ z-index:1100 !important; }
+.search-area-btn{ z-index:1100 !important; }
+.tutorial-overlay{ z-index:3000 !important; }
+.art-pin{background:none;border:none;}
+.art-pin svg{display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35));}
+.art-pin.sel svg{filter:drop-shadow(0 2px 4px rgba(0,0,0,.5));}

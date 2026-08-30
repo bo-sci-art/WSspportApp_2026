@@ -1,900 +1,425 @@
-require([
-  "esri/WebMap",
-  "esri/WebScene",
-  "esri/views/MapView",
-  "esri/views/SceneView",
-  "esri/Graphic",
-  "esri/widgets/Legend",
-  "esri/symbols/support/symbolUtils",
-  "esri/renderers/SimpleRenderer",
-  "esri/symbols/PointSymbol3D",
-  "esri/symbols/IconSymbol3DLayer",
-  "esri/symbols/callouts/LineCallout3D",
-  "esri/core/reactiveUtils"
-], function(
-  WebMap, WebScene, MapView, SceneView, Graphic, Legend, symbolUtils,
-  SimpleRenderer, PointSymbol3D, IconSymbol3DLayer, LineCallout3D,
-  reactiveUtils
-) {
+/* =========================================================
+   防災行動マップ（present） Leaflet + 国土地理院版
+   - ArcGIS / Survey123 を廃止し、data/artworks.geojson を読む
+   - UI・挙動は既存のまま。地図エンジンとハザード重ねのみ差し替え
+   ========================================================= */
+document.addEventListener("DOMContentLoaded", () => {
 
-  // --- 1. マップ定義 ---
-  const webMap2D = new WebMap({portalItem: { id: "fef70d22c8bd4545be008db3c813117c" }});
-  const webScene3D = new WebScene({portalItem: { id: "1d460637ebc54346851a47514f576433"}});
-  
-  let activeView = new MapView({
-    container: "viewDiv",
-    map: webMap2D,
-    zoom: 15,
-    highlightOptions: {color: [255, 0, 0], haloOpacity: 1, fillOpacity: 0.3},
-    popup: {autoOpenEnabled: false}
+  // Leaflet未読込ガード（診断用）
+  if (typeof L === "undefined") {
+    const v = document.getElementById("viewDiv");
+    if (v) v.innerHTML = '<div style="padding:24px;color:#c0503a;font-weight:bold;">地図ライブラリ(Leaflet)を読み込めませんでした。leaflet.js が同じフォルダにあるか確認してください。</div>';
+    return;
+  }
+
+  // 統合時はここを "../../data" に変えるだけ（present から見た data/ の相対パス）
+  const DATA_BASE = "https://raw.githubusercontent.com/bo-sci-art/WSspportApp_2026/main/data";
+  const HIDDEN_IDS = [];   // 非表示にしたい作品idを入れる（取り下げ用の安全弁）
+
+  /* ---------- 1. 地図（国土地理院タイル） ---------- */
+  const bases = {
+    white: L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png", {maxZoom:18, attribution:"地理院タイル（淡色地図）"}),
+    sat:   L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg", {maxZoom:18, attribution:"地理院タイル（写真）"})
+  };
+  const map = L.map("viewDiv", { center:[35.5385,139.6335], zoom:14, layers:[bases.white], zoomControl:true });
+  L.control.scale({imperial:false}).addTo(map);
+  let curBase = bases.white;
+  function setBase(k){
+    map.removeLayer(curBase);
+    curBase = (k === "sat") ? bases.sat : bases.white;
+    curBase.addTo(map); curBase.bringToBack();
+    document.getElementById("white-map-btn").classList.toggle("active", k === "white");
+    document.getElementById("satellite-btn").classList.toggle("active", k === "sat");
+  }
+  document.getElementById("white-map-btn").onclick = () => setBase("white");
+  document.getElementById("satellite-btn").onclick = () => setBase("sat");
+
+  /* ---------- 2. ハザードタイル（国土地理院／map/app/detail から流用） ---------- */
+  const HZ = "https://disaportaldata.gsi.go.jp/raster/";
+  const hazards = {
+    flood_l2: { layer:L.tileLayer(HZ+"01_flood_l2_shinsuishin_data/{z}/{x}/{y}.png",{maxZoom:17,opacity:.7,attribution:"重ねるハザードマップ（国土地理院）"}),
+      name:"洪水（外水氾濫）", legend:"shinsui",
+      desc:"川の水が、想定し得る最大規模の大雨であふれ、堤防を越えたり壊れたりして街に流れ込む浸水です。色が濃いほど深く浸かります。" },
+    tsunami: { layer:L.tileLayer(HZ+"04_tsunami_newlegend_data/{z}/{x}/{y}.png",{maxZoom:17,opacity:.7,attribution:"重ねるハザードマップ（国土地理院）"}),
+      name:"津波", legend:"shinsui",
+      desc:"海底の地震などで海水が持ち上げられ、大きな波となって陸へ押し寄せる浸水です。原因は「海の地震」で、高潮とは異なります。" },
+    hightide: { layer:L.tileLayer(HZ+"03_hightide_l2_shinsuishin_data/{z}/{x}/{y}.png",{maxZoom:17,opacity:.7,attribution:"重ねるハザードマップ（国土地理院）"}),
+      name:"高潮", legend:"shinsui",
+      desc:"台風や低気圧による“吸い上げ”と“吹き寄せ”で潮位が大きく上昇し、海水があふれる浸水です。原因は「台風・気象」で、津波とは別物です。" },
+    kyukei: { layer:L.tileLayer(HZ+"05_kyukeishakeikaikuiki/{z}/{x}/{y}.png",{maxZoom:17,opacity:.7,attribution:"重ねるハザードマップ（国土地理院）"}),
+      name:"土砂災害（急傾斜地の崩壊）", legend:"dosha",
+      desc:"急な斜面（がけ）が大雨や地震で崩れ落ちる“がけ崩れ”の危険がある区域です。黄＝警戒区域、赤＝特別警戒区域（より危険）。" },
+    swale: { layer:L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/swale/{z}/{x}/{y}.png",{maxZoom:17,maxNativeZoom:16,opacity:.65,attribution:"地理院タイル（明治期の低湿地）"}),
+      name:"液状化に関わる低地（明治期の低湿地・参考）", legend:"swale",
+      desc:"明治期に湿地・水田・旧河道などだった土地の色分けです。低湿地ほど液状化等との関連が深いとされます。※正式な液状化予測ではなく参考データで、位置に最大100m程度の誤差があります。" }
+  };
+  const LEGEND_GRAPHIC = {
+    shinsui: '<img src="https://disaportal.gsi.go.jp/hazardmap/copyright/img/shinsui_legend3.png" alt="浸水深凡例" onerror="this.replaceWith(document.createTextNode(\'（凡例画像を読み込めませんでした）\'))">',
+    dosha: '<div class="lg-css-row"><span class="lg-swatch" style="background:#ffe600"></span>警戒区域（イエロー）</div><div class="lg-css-row"><span class="lg-swatch" style="background:#ff5a3c"></span>特別警戒区域（レッド）</div>',
+    swale: '<div class="lg-desc" style="margin-bottom:6px">色分け＝明治期の土地の種類（砂礫地・湿地・水田・旧河道 など）。</div><a href="https://cyberjapandata.gsi.go.jp/legend/lw_legend.pdf" target="_blank" rel="noopener" style="font-size:.8em;color:#4f8b80;font-weight:bold">▶ 国土地理院の公式凡例（色の一覧）を見る</a>'
+  };
+  Object.keys(hazards).forEach(k => {
+    const el = document.getElementById("haz-" + k);
+    if (!el) return;
+    el.onchange = e => {
+      if (e.target.checked){ hazards[k].layer.addTo(map); hazards[k].layer.bringToFront(); }
+      else map.removeLayer(hazards[k].layer);
+      refreshLegend();
+    };
   });
-  
-  let is3D = false; 
-  let activeLegend = null;
-  let activeClickHandle = null;
-  let activeHighlightHandle = null;
-  let highlightedObjectId = null; 
-  let isProgrammaticScroll = false; 
-
-  // --- 2. 初期化 ---
-  async function initializeApp() {
-    // UI設定を最優先（地図ロード待ち回避）
-    setupStaticUI();
-
-    try {
-      await Promise.all([webMap2D.load(), webScene3D.load()]);
-    } catch (error) {
-      console.error("マップ読み込み失敗", error);
-    }
-    await activeView.when();
-
-    updateMapFilter(); 
-    setupViewDependentUI(activeView);
-    
-    addSymbolToCategoryChips();
-    addSymbolToResourceList();
-  }
-
-  // --- 3. UI設定 (静的) ---
-  function setupStaticUI() {
-    // 3D/2D切り替え
-    const btn3d = document.getElementById("3d-btn");
-    const btn2d = document.getElementById("2d-btn");
-    if(btn3d) btn3d.addEventListener("click", () => switchView(true));
-    if(btn2d) btn2d.addEventListener("click", () => switchView(false));
-    
-    // 背景地図切り替え
-    const whiteMapBtn = document.getElementById("white-map-btn");
-    const satelliteBtn = document.getElementById("satellite-btn");
-    const toggleBasemap = (showSatellite) => {
-        const title = "衛星画像（World Imagery）";
-        const l2d = webMap2D.allLayers.find(l => l.title === title);
-        const l3d = webScene3D.allLayers.find(l => l.title === title);
-        if(l2d) l2d.visible = showSatellite;
-        if(l3d) l3d.visible = showSatellite;
-        
-        if(showSatellite && satelliteBtn && whiteMapBtn){ 
-            satelliteBtn.classList.add("active"); whiteMapBtn.classList.remove("active"); 
-        } else if(whiteMapBtn && satelliteBtn) { 
-            whiteMapBtn.classList.add("active"); satelliteBtn.classList.remove("active"); 
-        }
+  document.querySelectorAll(".haz-info").forEach(b => {
+    b.onclick = () => {
+      const k = b.dataset.k, el = document.getElementById("haz-" + k);
+      if (el && !el.checked) { el.checked = true; hazards[k].layer.addTo(map); hazards[k].layer.bringToFront(); }
+      refreshLegend();
+      const box = document.getElementById("legend-container");
+      const card = document.getElementById("lg-" + k);
+      if (card) { card.scrollIntoView({behavior:"smooth", block:"nearest"}); card.style.outline = "2px solid #6BAA9F"; setTimeout(() => card.style.outline = "none", 1200); }
     };
-    if(whiteMapBtn) whiteMapBtn.addEventListener("click", () => toggleBasemap(false));
-    if(satelliteBtn) satelliteBtn.addEventListener("click", () => toggleBasemap(true));
-
-    // 防災情報パネルボタン
-    const menuBtn = document.getElementById("menu-btn");
-    const controlPanel = document.getElementById("control-panel");
-    if (menuBtn && controlPanel) {
-        menuBtn.addEventListener("click", () => {
-            controlPanel.style.display = "flex"; 
-        });
-    }
-
-    const closePanelBtn = document.getElementById("close-panel-btn");
-    if (closePanelBtn && controlPanel) {
-        closePanelBtn.addEventListener("click", () => {
-            controlPanel.style.display = "none";
-        });
-    }
-
-    // ハザードマップ重ねるボタン
-    const openHazardBtn = document.getElementById("open-hazard-btn");
-    if (openHazardBtn && controlPanel) {
-        openHazardBtn.addEventListener("click", () => {
-            controlPanel.style.display = "flex";
-            const hazardTab = document.getElementById("hazard-tab");
-            if(hazardTab) hazardTab.click();
-            highlightHazardGroup(currentCategory);
-        });
-    }
-
-    // タブ切り替え
-    const tabs = ["hazard", "resource"];
-    tabs.forEach(tab => {
-        const tabBtn = document.getElementById(`${tab}-tab`);
-        if(tabBtn){
-            tabBtn.addEventListener("click", () => {
-                tabs.forEach(t => {
-                    document.getElementById(`${t}-tab`).classList.remove("active");
-                    document.getElementById(`${t}-content`).style.display = "none";
-                });
-                document.getElementById(`${tab}-tab`).classList.add("active");
-                document.getElementById(`${tab}-content`).style.display = "block";
-            });
-        }
-    });
-
-    // レイヤーON/OFF設定
-    const layerMapping = {
-      "gaisui-filter": "gaisui_clip",       
-      "naisui_R7-filter": "naisui_R7_clip",
-      "takashio-filter": "takashio_clip",
-      "tsunami-filter": "tsunami_clip",
-      "kyukeisha_R7-filter": "kyukeisha_R7_clip",
-      "ekijyouka-filter": "ekijyouka_clip",
-      "jishindo-filter": "jishindo_clip",
-      "shoshitsu-filter": "shoshitsu_clip",
-      "TIIKIBOSAIKYOTEN-filter": "TIIKIBOSAIKYOTEN", 
-      "koen-point-filter": "koen-point",
-      "toilet-filter": "toilet", 
-      "hamakkotoilet-filter": "hamakkotoilet",
-      "syouboukigu-filter": "syouboukigu", 
-      "douro12-filter": "douro12",
-      "douro4-filter": "douro4", 
-      "yusouro-filter": "yusouro",
-      "suibu-filter": "suibu", 
-      "kinkyu_kyusuisen-filter": "kinkyu_kyusuisen",
-      "taishin_kyusuisen-filter": "taishin_kyusuisen", 
-      "kyusuitank-filter": "kyusuitank",
-      "haisuisou-filter": "haisuisou"
-    };
-
-    Object.entries(layerMapping).forEach(([checkId, layerTitle]) => {
-      const checkbox = document.getElementById(checkId);
-      if (!checkbox) return;
-      checkbox.addEventListener("change", () => {
-        [webMap2D, webScene3D].forEach(map => {
-          const l = map.allLayers.find(layer => layer.title === layerTitle);
-          if (l) l.visible = checkbox.checked;
-        });
-      });
-    });
-
-    setupCategoryFilter();
-    setupFilterToggle();
-    setupTutorial();
+  });
+  function refreshLegend(){
+    const box = document.getElementById("legend-container");
+    const active = Object.keys(hazards).filter(k => map.hasLayer(hazards[k].layer));
+    if (!active.length){ box.innerHTML = '<div class="legend-empty">災害を選ぶと、説明と凡例が表示されます</div>'; return; }
+    box.innerHTML = active.map(k => {
+      const h = hazards[k];
+      return '<div class="legend-item" id="lg-'+k+'"><div class="lg-name">'+h.name+'</div><div class="lg-desc">'+h.desc+'</div>'+LEGEND_GRAPHIC[h.legend]+'</div>';
+    }).join("");
   }
+  refreshLegend();
 
-  // --- 右パネル強調 ---
-  function highlightHazardGroup(category) {
-      document.querySelectorAll(".hazard-group").forEach(g => g.classList.remove("highlight"));
-      let targetId = "";
-      if (category === "mizu") targetId = "group-mizu";
-      else if (category === "jiban") targetId = "group-jiban";
-      else if (category === "jishin") targetId = "group-jishin";
-
-      if (targetId) {
-          const target = document.getElementById(targetId);
-          if (target) {
-              target.classList.add("highlight");
-              setTimeout(() => { target.classList.remove("highlight"); }, 3000);
-              target.scrollIntoView({ behavior: "smooth", block: "center" });
-          }
-      }
+  /* ---------- 3. カテゴリ・状態 ---------- */
+  function category(f24){
+    const s = f24 || "";
+    if (/震度|火災/.test(s)) return "jishin";
+    if (/土砂|液状化/.test(s)) return "jiban";
+    if (/洪水|高潮|津波/.test(s)) return "mizu";
+    return "other";
   }
+  const CATCOLOR = { mizu:"#2F80C4", jiban:"#B5793A", jishin:"#E0574A", other:"#888888" };
+  const CATLABEL = { mizu:"水", jiban:"地盤", jishin:"地震" };
 
-  // --- 4. カテゴリフィルター ---
-  let currentCategory = "all";
-  let currentPhase = "all";
-  let isHeartFilterOn = false;
-  let isActionFilterOn = false;
+  // 作品ピン（ティアドロップ形）
+  function makeIcon(color, big){
+    const w = big ? 34 : 26, h = big ? 46 : 36;
+    const svg = '<svg width="'+w+'" height="'+h+'" viewBox="0 0 24 32" xmlns="http://www.w3.org/2000/svg">'
+      + '<path d="M12 0C5.4 0 0 5.4 0 12c0 8.4 12 20 12 20s12-11.6 12-20C24 5.4 18.6 0 12 0z" fill="'+color+'" stroke="#ffffff" stroke-width="2.5"/>'
+      + '<circle cx="12" cy="12" r="4.3" fill="#ffffff"/></svg>';
+    return L.divIcon({ className:"art-pin"+(big?" sel":""), html:svg, iconSize:[w,h], iconAnchor:[w/2,h], tooltipAnchor:[0,-h+10] });
+  }
 
   const phaseKeywords = {
-    prior: ["備蓄", "水", "食料", "ハザードマップ", "訓練", "家具", "固定", "ガラス", "ブロック塀", "散歩", "確認", "話し合い", "家族", "連絡", "知", "学", "準備", "日頃", "靴", "備え", "アプリ", "登録"],
-    during: ["逃げ", "避難", "高台", "走", "垂直", "2階", "3階", "浸水", "揺れ", "机の下", "守", "火", "消火", "煙", "119", "110", "通報", "助け", "声かけ", "安否", "ライト", "懐中電灯", "停電", "ブレーカー"],
-    recovery: ["片付け", "掃除", "泥", "ゴミ", "ボランティア", "助け合い", "協力", "炊き出し", "避難所", "トイレ", "衛生", "薬", "病院", "給水", "復旧", "再開", "つながり", "励まし", "絆", "相談", "申請"]
+    prior: ["備蓄","水","食料","ハザードマップ","訓練","家具","固定","ガラス","ブロック塀","散歩","確認","話し合い","家族","連絡","知","学","準備","日頃","靴","備え","アプリ","登録"],
+    during: ["逃げ","避難","高台","走","垂直","2階","3階","浸水","揺れ","机の下","守","火","消火","煙","119","110","通報","助け","声かけ","安否","ライト","懐中電灯","停電","ブレーカー"],
+    recovery: ["片付け","掃除","泥","ゴミ","ボランティア","助け合い","協力","炊き出し","避難所","トイレ","衛生","薬","病院","給水","復旧","再開","つながり","励まし","絆","相談","申請"]
   };
 
-  // --- ★修正完了：お気に入りボタンも確実に動くように改修 ---
-  function setupCategoryFilter() {
-    // 1. ハザード種別のチップ
-    document.querySelectorAll(".chip[data-cat]").forEach(chip => {
-      chip.onclick = () => { // onclickに変更
-        document.querySelectorAll(".chip[data-cat]").forEach(c => c.classList.remove("active"));
-        chip.classList.add("active");
-        currentCategory = chip.dataset.cat;
-        updateMapFilter();
-      };
-    });
+  let currentCategory = "all", currentPhase = "all";
+  let isHeartFilterOn = false, isActionFilterOn = false;
+  let ALL = [];                 // 全作品（features）
+  const markerById = {};        // id -> circleMarker
+  let selectedId = null;
+  let isProgrammaticScroll = false;
+  const artLayer = L.layerGroup().addTo(map);
 
-    // 2.行動のタイミングのチップ
-    document.querySelectorAll(".chip[data-phase]").forEach(chip => {
-      chip.onclick = () => { // onclickに変更
-        document.querySelectorAll(".chip[data-phase]").forEach(c => c.classList.remove("active"));
-        chip.classList.add("active");
-        currentPhase = chip.dataset.phase;
-        updateMapFilter();
-      };
-    });
+  const ls = (k) => JSON.parse(localStorage.getItem(k) || "[]");
+  const getHearts = () => ls("bousai_hearts");
+  const getActions = () => ls("bousai_actions");
+  const getViewed  = () => ls("bousai_viewed");
 
-    // 3. お気に入り（ハート）ボタン
-    const heartBtn = document.getElementById("filter-heart-btn");
-    if(heartBtn){
-        heartBtn.onclick = () => {
-          isHeartFilterOn = !isHeartFilterOn; // フラグを反転
-          
-          // 見た目の切り替え
-          if (isHeartFilterOn) {
-            heartBtn.classList.add("active");
-            heartBtn.innerHTML = "💖 印象的"; // アイコンを変化させる！
-          } else {
-            heartBtn.classList.remove("active");
-            heartBtn.innerHTML = "♡ 印象的";
-          }
-          updateMapFilter();
-        };
+  /* ---------- 4. フィルタ判定 ---------- */
+  function passFilter(p){
+    if (HIDDEN_IDS.includes(p.id)) return false;
+    if (currentCategory !== "all" && category(p.field_24) !== currentCategory) return false;
+    if (currentPhase !== "all"){
+      const text = (p.Message||"") + (p.collage||"") + (p.Mabling||"");
+      if (!phaseKeywords[currentPhase].some(kw => text.includes(kw))) return false;
     }
-
-    // 4. アクションボタン
-    const actionBtn = document.getElementById("filter-action-btn");
-    if(actionBtn){
-        actionBtn.onclick = () => {
-          isActionFilterOn = !isActionFilterOn; // フラグを反転
-          
-          // 見た目の切り替え
-          if (isActionFilterOn) {
-            actionBtn.classList.add("active");
-            actionBtn.innerHTML = "⭐ 実践したい"; // アイコンを変化！
-          } else {
-            actionBtn.classList.remove("active");
-            actionBtn.innerHTML = "✨ 実践したい";
-          }
-          updateMapFilter();
-        };
+    if (isHeartFilterOn || isActionFilterOn){
+      const hearts = getHearts(), actions = getActions();
+      let ok = false;
+      if (isHeartFilterOn && hearts.includes(p.id)) ok = true;
+      if (isActionFilterOn && actions.includes(p.id)) ok = true;
+      if (!ok) return false;
     }
+    return true;
   }
 
-  // --- フィルター適用（決定版：強制表示あり） ---
-  function updateMapFilter() {
-    // 1. 基本の絞り込み条件を作る
-    let whereClauses = [];
-    const jishinSQL = "(field_24 LIKE '%震度%' OR field_24 LIKE '%火災%')";
-    const jibanSQL  = "(field_24 LIKE '%土砂災害%' OR field_24 LIKE '%液状化%')";
-    const mizuSQL   = "(field_24 LIKE '%洪水%' OR field_24 LIKE '%高潮%' OR field_24 LIKE '%津波%')";
-    
-    // 除外したいID
-    const hiddenIds = [23, 25, 26, 27, 28];
-    if (hiddenIds.length > 0) {
-        whereClauses.push(`objectid NOT IN (${hiddenIds.join(",")})`);
-    }
-
-    // カテゴリ
-    if (currentCategory === "jishin") whereClauses.push(jishinSQL);
-    else if (currentCategory === "jiban") whereClauses.push(`${jibanSQL} AND NOT ${jishinSQL}`);
-    else if (currentCategory === "mizu") whereClauses.push(`${mizuSQL} AND NOT ${jishinSQL} AND NOT ${jibanSQL}`);
-
-    // フェーズ
-    if (currentPhase !== "all") {
-        const keywords = phaseKeywords[currentPhase];
-        const keywordConditions = keywords.map(kw => 
-            `(Message LIKE '%${kw}%' OR collage LIKE '%${kw}%' OR Mabling LIKE '%${kw}%')`
-        ).join(" OR ");
-        whereClauses.push(`(${keywordConditions})`);
-    }
-
-    // お気に入り・アクション
-    let savedIds = [];
-    const savedHearts = JSON.parse(localStorage.getItem("bousai_hearts") || "[]");
-    const savedActions = JSON.parse(localStorage.getItem("bousai_actions") || "[]");
-
-    if (isHeartFilterOn && isActionFilterOn) {
-        savedIds = [...new Set([...savedHearts, ...savedActions])];
-    } else if (isHeartFilterOn) {
-        savedIds = savedHearts;
-    } else if (isActionFilterOn) {
-        savedIds = savedActions;
-    }
-
-    if ((isHeartFilterOn || isActionFilterOn)) {
-        if (savedIds.length > 0) {
-            whereClauses.push(`objectid IN (${savedIds.join(",")})`);
-        } else {
-            whereClauses.push("1=0"); 
-        }
-    }
-
-    const finalSQL = whereClauses.length > 0 ? whereClauses.join(" AND ") : "1=1";
-
-    // 2. 鑑賞済みレイヤー（survey2）用の条件
-    let viewedSQL = finalSQL;
-    let viewedList = JSON.parse(localStorage.getItem("bousai_viewed") || "[]");
-    viewedList = viewedList.filter(id => !hiddenIds.includes(id));
-
-    if (viewedList.length > 0) {
-        viewedSQL += ` AND objectid IN (${viewedList.join(",")})`;
-    } else {
-        viewedSQL += " AND 1=0";
-    }
-
-    // 3. マップ上のレイヤーに命令する
-    [webMap2D, webScene3D].forEach(map => {
-      // (A) 元のレイヤー（survey）
-      const artPins = map.allLayers.find(l => l.title === "survey");
-      if (artPins) artPins.definitionExpression = finalSQL;
-
-      // (B) 重ねるレイヤー（survey2）
-      // ★名前が少し違っても見つかるように includes を使用
-      const viewedPins = map.allLayers.find(l => l.title === "survey2" || l.title.includes("survey2"));
-      if (viewedPins) {
-          viewedPins.definitionExpression = viewedSQL;
-          viewedPins.visible = true; // ★【重要】ここで強制的に表示ONにする！
-          viewedPins.opacity = 1;    // 透明度も100%にする
-      }
-    });
-
-    // 4. サイドバー更新
-    const artPinsLayer = activeView.map.allLayers.find(l => l.title === "survey");
-    if (artPinsLayer) {
-        activeView.whenLayerView(artPinsLayer).then(lv => {
-            updateSidebarList(lv, artPinsLayer, activeView);
-        });
-    }
-
-    updateHeaderStats();
-  }
-
-  async function updateHeaderStats() {
-    const savedHearts = JSON.parse(localStorage.getItem("bousai_hearts") || "[]");
-    const savedActions = JSON.parse(localStorage.getItem("bousai_actions") || "[]");
-    const heartEl = document.getElementById("header-heart-count");
-    const actionEl = document.getElementById("header-action-count");
-    if(heartEl) heartEl.textContent = savedHearts.length;
-    if(actionEl) actionEl.textContent = savedActions.length;
-
-    const viewCountEl = document.getElementById("view-count");
-    if (viewCountEl) {
-        // ★修正：計算から除外したいID
-        const hiddenIds = [23, 25, 26, 27, 28];
-
-        // 1. 分子（鑑賞済み数）の修正
-        let viewedList = JSON.parse(localStorage.getItem("bousai_viewed") || "[]");
-        // もし隠しIDを見てしまっていても、カウントから引く
-        viewedList = viewedList.filter(id => !hiddenIds.includes(id));
-        const viewedCount = viewedList.length;
-        
-        const layer = webMap2D.allLayers.find(l => l.title === "survey");
-        let totalCount = "?";
-        if (layer) {
-            try {
-                await layer.load();
-                // 2. 母数（全作品数）の修正
-                // SQLで除外してカウントする
-                const whereClause = `objectid NOT IN (${hiddenIds.join(",")})`;
-                totalCount = await layer.queryFeatureCount({ where: whereClause });
-            } catch (e) {
-                console.error("作品数の取得に失敗", e);
-            }
-        }
-        viewCountEl.textContent = `${viewedCount}/${totalCount}`;
-    }
-  }
-
-  // --- 5. シンボル表示 ---
-  const catMap = { "jishin": "地震", "jiban": "地盤", "mizu": "水" };
-
-  async function addSymbolToCategoryChips() {
-    const layer = webMap2D.allLayers.find(l => l.title === "survey");
-    if (!layer) return;
-    await layer.load();
-    const renderer = layer.renderer;
-    if (!renderer || !renderer.uniqueValueInfos) return;
-
-    const chips = document.querySelectorAll('.chip[data-cat]');
-    for (const chip of chips) {
-      const category = chip.dataset.cat;
-      if (category === "all") continue; 
-      const info = renderer.uniqueValueInfos.find(i => i.value === catMap[category]);
-      if (info && info.symbol) {
-        const existing = chip.querySelector(".symbol-preview");
-        if(existing) existing.remove();
-        const symbolElement = await symbolUtils.renderPreviewHTML(info.symbol, { size: 18 });
-        symbolElement.classList.add('symbol-preview');
-        chip.prepend(symbolElement);
-      }
-    }
-    await injectSymbolToHeader("group-mizu", "mizu", renderer);
-    await injectSymbolToHeader("group-jiban", "jiban", renderer);
-    await injectSymbolToHeader("group-jishin", "jishin", renderer);
-  }
-
-  async function injectSymbolToHeader(groupId, catKey, renderer) {
-    const group = document.getElementById(groupId);
-    if (!group) return;
-    const header = group.querySelector(".hazard-group-header");
-    if (!header) return;
-    const info = renderer.uniqueValueInfos.find(i => i.value === catMap[catKey]);
-    if (info && info.symbol) {
-      const existing = header.querySelector(".symbol-preview");
-      if(existing) existing.remove();
-      const symbolElement = await symbolUtils.renderPreviewHTML(info.symbol, { size: 24 });
-      symbolElement.classList.add('symbol-preview');
-      header.prepend(symbolElement);
-    }
-  }
-
-  async function addSymbolToResourceList() {
-    const resourceOptions = document.querySelectorAll('#resource-filters .filter-option');
-    for (const option of resourceOptions) {
-      const checkbox = option.querySelector('input[type="checkbox"]');
-      if (!checkbox) continue;
-      const layerTitle = checkbox.id.replace('-filter', '');
-      const layer = webMap2D.allLayers.find(l => l.title === layerTitle);
-      if (layer) {
-        await layer.load();
-        if (layer.renderer) {
-          let symbol = layer.renderer.symbol || layer.renderer.uniqueValueInfos?.[0]?.symbol || layer.renderer.classBreakInfos?.[0]?.symbol;
-          if (symbol) {
-            const symbolElement = await symbolUtils.renderPreviewHTML(symbol, { size: 16 });
-            symbolElement.classList.add('symbol-preview');
-            const container = option.querySelector('.symbol-and-label');
-            if (container) {
-                const existing = container.querySelector(".symbol-preview");
-                if(existing) existing.remove();
-                container.prepend(symbolElement);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // --- 7. ビュー切り替え ---
-  async function switchView(to3D) {
-    if (is3D === to3D) return; 
-    const viewpoint = activeView.viewpoint.clone();
-    activeView.container = null;
-    const redHighlightOptions = { color: [255, 0, 0], haloOpacity: 0.9, fillOpacity: 0.2 };
-
-    if (to3D) {
-      activeView = new SceneView({ 
-          container: "viewDiv", 
-          map: webScene3D, 
-          viewpoint: viewpoint,
-          highlightOptions: redHighlightOptions,
-          popup: { autoOpenEnabled: false }
-      });
-      is3D = true;
-      document.getElementById("3d-btn").classList.add("active");
-      document.getElementById("2d-btn").classList.remove("active");
-    } else {
-      activeView = new MapView({ 
-          container: "viewDiv", 
-          map: webMap2D, 
-          viewpoint: viewpoint,
-          highlightOptions: redHighlightOptions,
-          popup: { autoOpenEnabled: false }
-      });
-      is3D = false;
-      document.getElementById("2d-btn").classList.add("active");
-      document.getElementById("3d-btn").classList.remove("active");
-    }
-    await activeView.when(); 
-    setupViewDependentUI(activeView);
-  }
-
-  // --- UI設定（ビュー依存） ---
-  async function setupViewDependentUI(currentView) {
-    if (activeLegend) { try { currentView.ui.remove(activeLegend); activeLegend.destroy(); } catch(e){} }
-    if (activeClickHandle) activeClickHandle.remove();
-    if (activeHighlightHandle) { activeHighlightHandle.remove(); activeHighlightHandle = null; }
-
-    const legendTitleMapping = {
-      "gaisui_clip": "川の水があふれる洪水（外水氾濫）",
-      "naisui_R7_clip": "下水があふれる洪水（内水氾濫）",
-      "takashio_clip": "高潮（浸水深）",
-      "tsunami_clip": "津波（浸水深、慶長型地震）",
-      "kyukeisha_R7_clip": "土砂災害",
-      "ekijyouka_clip": "地盤の液状化（元禄型関東地震）",
-      "jishindo_clip": "震度情報（元禄型関東地震）",
-      "shoshitsu_clip": "地震火災（元禄型関東地震）",
-      "TIIKIBOSAIKYOTEN": "地域防災拠点",
-      "koen-point": "公園",
-      "toilet": "公衆トイレ",
-      "hamakkotoilet": "災害用ハマッコトイレ",
-      "syouboukigu": "消防団器具置き場",
-      "douro12": "避難に適する道路（幅12m以上）",
-      "douro4": "避難に適さない道路（幅4m程度）",
-      "yusouro": "緊急輸送路",
-      "suibu": "水部",
-      "kinkyu_kyusuisen": "緊急給水栓",
-      "taishin_kyusuisen": "耐震給水栓",
-      "kyusuitank": "災害用地下給水タンク",
-      "haisuisou": "配水池・配水槽"
-    };
-
-    const operationalLayers = currentView.map.allLayers.filter(layer => {
-      return layer.title !== "survey" && 
-             layer.title !== "survey2" && 
-             layer.title !== "衛星画像（World Imagery）" && 
-             (layer.title.includes("_clip") || layer.type === "feature" || layer.type === "tile");
-    });
-
-    activeLegend = new Legend({
-      view: currentView,
-      layerInfos: operationalLayers.map(layer => { 
-        const newTitle = legendTitleMapping[layer.title] || layer.title;
-        return { layer: layer, title: newTitle }; 
-      }).toArray()
-    });
-    currentView.ui.add(activeLegend, "bottom-right");
-
-    const artPinsLayer = currentView.map.allLayers.find(l => l.title === "survey");
-    if (!artPinsLayer) return;
-    const layerView = await currentView.whenLayerView(artPinsLayer);
-
-    const searchBtn = document.getElementById("search-area-btn");
-    reactiveUtils.watch(() => currentView.stationary, (isStat) => {
-      if (isStat) searchBtn.style.display = "block";
-    });
-    searchBtn.onclick = () => {
-      updateSidebarList(layerView, artPinsLayer, currentView);
-      searchBtn.style.display = "none";
-    };
-
-    const listContainer = document.getElementById("art-list-container");
-    const newListContainer = listContainer.cloneNode(true);
-    listContainer.parentNode.replaceChild(newListContainer, listContainer);
-    newListContainer.addEventListener("scroll", () => {
-      if (!isProgrammaticScroll) detectCenterCard(layerView, artPinsLayer);
-    });
-    
-    await updateSidebarList(layerView, artPinsLayer, currentView);
-
-    if (highlightedObjectId) {
-        const targetCard = document.getElementById(`card-${highlightedObjectId}`);
-        if (targetCard) {
-            highlightCardInSidebar(highlightedObjectId, layerView, artPinsLayer);
-        } else {
-            highlightMapPin(highlightedObjectId, layerView);
-        }
-    }
-
-    activeClickHandle = currentView.on("click", (event) => { 
-      currentView.hitTest(event).then((res) => {
-        const result = res.results.find(r => r.graphic.layer === artPinsLayer); 
-        if (result) {
-            const oid = result.graphic.attributes.objectid;
-            highlightCardInSidebar(oid, layerView, artPinsLayer); 
-        } else {
-            highlightMapPin(null, layerView);
-            document.querySelectorAll(".art-card").forEach(c => c.classList.remove("active-card"));
-        }
-      });
-    });  
-  }
-
-// --- 🕵️‍♀️ 1. 探す専用のミニロボット関数 ---
-function findPersonText(text) {
+  /* ---------- 5. 宛名の抽出（旧ロジック踏襲） ---------- */
+  function findPersonText(text){
     if (!text) return null;
-
-    // ① まず改行やスペースを消して1行にする
-    let cleanText = text.replace(/[\r\n\s]+/g, "");
-
-    // ② ★ここがポイント！
-    // 「、]」が含まれていたら、そこで強制的に文章を終わらせる！
-    cleanText = cleanText.split(/[、。.,．]/)[0];
-
-    // ③ 切り取った「前半部分」だけを使って、人っぽい言葉を探す
-    // ※念のため文字数制限（40文字）もかけておく
-    const limitText = cleanText.substring(0, 40);
-    
-    // キーワードリスト
-    const regex = /.*?(人|者|民|方|達|学生|慶應生|生徒|たち|家族|みんな|さん|ちゃん|友|自分|ママ|パパ)/;
-
-    const match = limitText.match(regex);
-
-    if (match) {
-        // 前半部分にキーワードがあれば採用！
-        return match[0] + "へ";
-    }
-    
-    // キーワードがなければ「null」を返す
-    // → 親分（extractAddressee）がこれを見て「じゃあ次はコラージュを見るか」って判断してくれるよ！
-    return null; 
-}
-
-// --- 🎯 2. メインの宛名決定関数 ---
-// ※呼び出す時に、messageだけじゃなくて解説文も渡してね！
-function extractAddressee(message, collage, Mabling) {
-    
-    // ① まずメッセージから探す
-    const target1 = findPersonText(message);
-    if (target1) return target1; // 見つかったら即採用！
-
-    // ② なければコラージュ解説から探す
-    const target2 = findPersonText(collage);
-    if (target2) return target2; // 見つかったら即採用！
-
-    // ③ それもなければマーブリング解説から探す
-    const target3 = findPersonText(Mabling);
-    if (target3) return target3; // 見つかったら即採用！
-
-    // ④ 全部空振りならデフォルト
-    return "地域のみんなへ";
-}
-
-  function highlightMapPin(oid, layerView) {
-    if (activeHighlightHandle) { activeHighlightHandle.remove(); activeHighlightHandle = null; }
-    activeView.graphics.removeAll(); 
-    highlightedObjectId = oid;
-    if (oid === null || !layerView) return;
-
-    const query = { objectIds: [oid], outFields: ["*"], returnGeometry: true };
-    layerView.layer.queryFeatures(query).then(res => {
-        if (highlightedObjectId !== oid) return;
-        if (res.features.length > 0) {
-            const feature = res.features[0];
-            const attrs = feature.attributes;
-            const message = attrs.Message || attrs.message || "";
-            const collage = attrs.collage || attrs.Collage || ""; 
-            const marbling = attrs.Mabling || attrs.Marbling || attrs.mabling || "";
-            const addressee = extractAddressee(message, collage, marbling);
-            if (!feature.geometry) return;
-
-            const label = new Graphic({
-                geometry: feature.geometry,
-                symbol: {
-                    type: "text", color: "#333333", text: "✉️ " + addressee, 
-                    yoffset: 30, font: { size: 12, weight: "bold", family: "sans-serif" },
-                    backgroundColor: [255, 255, 255, 0.95],
-                    borderLineColor: [0, 121, 193, 0.5], borderLineSize: 1,
-                    horizontalAlignment: "center",
-                    lineWidth: 500
-                }
-            });
-            activeView.graphics.add(label);
-            activeHighlightHandle = layerView.highlight(feature);
-        }
-    }).catch(error => { console.error("ラベル描画エラー:", error); });
+    let t = text.replace(/[\r\n\s]+/g, "").split(/[、。.,．]/)[0].substring(0, 40);
+    const m = t.match(/.*?(人|者|民|方|達|学生|慶應生|生徒|たち|家族|みんな|さん|ちゃん|友|自分|ママ|パパ)/);
+    return m ? m[0] + "へ" : null;
+  }
+  function extractAddressee(p){
+    return findPersonText(p.Message) || findPersonText(p.collage) || findPersonText(p.Mabling) || (p.target || "地域のみんなへ");
   }
 
-  // --- サイドバーのリスト更新（リボン付きver） ---
-  async function updateSidebarList(layerView, layer, view) {
+  /* ---------- 6. 地図ピン ---------- */
+  function renderMarkers(){
+    artLayer.clearLayers();
+    for (const k in markerById) delete markerById[k];
+    ALL.forEach(f => {
+      const p = f.properties;
+      if (!passFilter(p)) return;
+      const c = f.geometry && f.geometry.coordinates;
+      if (!c) return;
+      const cat = category(p.field_24);
+      const color = CATCOLOR[cat];
+      const m = L.marker([c[1], c[0]], { icon: makeIcon(color, false) });
+      m._color = color;
+      m.on("click", () => highlightCardInSidebar(p.id));
+      m.addTo(artLayer);
+      markerById[p.id] = m;
+    });
+  }
+
+  function highlightMapPin(id){
+    // 選択解除（通常サイズに戻す・ラベル消す）
+    Object.values(markerById).forEach(m => {
+      m.setIcon(makeIcon(m._color, false));
+      m.setZIndexOffset(0);
+      if (m.getTooltip()) m.unbindTooltip();
+    });
+    selectedId = id;
+    const m = markerById[id];
+    if (!m) return;
+    m.setIcon(makeIcon(m._color, true));
+    m.setZIndexOffset(1000);
+    const f = ALL.find(x => x.properties.id === id);
+    if (f){
+      m.bindTooltip("✉️ " + extractAddressee(f.properties), { permanent:true, direction:"top", className:"addressee-tip" }).openTooltip();
+    }
+  }
+
+  /* ---------- 7. サイドバーの作品リスト ---------- */
+  function inView(f){
+    const c = f.geometry && f.geometry.coordinates;
+    return c && map.getBounds().contains([c[1], c[0]]);
+  }
+  function renderList(){
     const listContainer = document.getElementById("art-list-container");
-    const query = layer.createQuery();
-    query.geometry = view.extent; 
-    query.where = layer.definitionExpression || "1=1";
-    query.outFields = ["*"];
-    
-    try {
-        const results = await layer.queryFeatures(query);
-        listContainer.innerHTML = ""; 
-        
-        if (results.features.length === 0) {
-            listContainer.innerHTML = `
-                <div style="text-align:center; padding:30px; color:#888;">
-                   <p>このエリアに条件に合う作品はありません</p>
-                   <p style="font-size:0.8em;">地図を動かして<br>「再検索」ボタンを押してください</p>
-                </div>`;
-            return;
-        }
-
-        // ★ここで鑑賞済みリストを読み込む！
-        const viewedList = JSON.parse(localStorage.getItem("bousai_viewed") || "[]");
-
-        for (const feature of results.features) {
-            const oid = feature.attributes.objectid;
-            const savedHearts = JSON.parse(localStorage.getItem("bousai_hearts") || "[]");
-            const savedActions = JSON.parse(localStorage.getItem("bousai_actions") || "[]");
-            
-            // アイコン（ハート・星）の準備
-            let iconsHtml = "";
-            if(savedHearts.includes(oid)) iconsHtml += " <span style='color:#ff69b4;'>💖</span>";
-            if(savedActions.includes(oid)) iconsHtml += " <span style='color:#fbc02d;'>✨</span>";
-
-            // ★リボンの準備（鑑賞済みならHTMLを作る）
-            let ribbonHtml = "";
-            if (viewedList.includes(oid)) {
-                ribbonHtml = `
-                  <div class="ribbon-wrapper">
-                    <div class="ribbon-text">鑑賞済</div>
-                  </div>
-                `;
-            }
-
-            const card = document.createElement("div");
-            card.className = "art-card";
-            card.id = `card-${oid}`;
-            
-            // ★カードの中に ribbonHtml を埋め込む
-            card.innerHTML = `
-                ${ribbonHtml}
-                <img src="https://via.placeholder.com/200?text=..." class="art-card-img" id="img-${oid}">
-                <div class="art-card-info">
-                    <div class="art-title">作者：
-                        ${feature.attributes.field_25 || "作者不明"}
-                        <span style="float:right; font-size:0.8em;">${iconsHtml}</span>
-                    </div>
-                </div>
-            `;
-            
-            card.addEventListener("click", () => {
-              highlightCardInSidebar(oid, layerView, layer);
-              setTimeout(() => { window.location.href = `detail.html?id=${oid}`; }, 300);
-            });
-            listContainer.appendChild(card);
-            
-            layer.queryAttachments({ objectIds: [oid] }).then(attachments => {
-                if (attachments[oid]?.length > 0) document.getElementById(`img-${oid}`).src = attachments[oid][0].url;
-            });
-        }
-
-        if (results.features.length === 1) {
-            const onlyOid = results.features[0].attributes.objectid;
-            setTimeout(() => { highlightCardInSidebar(onlyOid, layerView, layer); }, 100);
-        }
-    } catch (e) { 
-        console.error("リスト生成エラー:", e);
-        listContainer.innerHTML = "<p>読み込みエラーが発生しました</p>";
+    const viewed = getViewed(), hearts = getHearts(), actions = getActions();
+    const items = ALL.filter(f => passFilter(f.properties) && inView(f));
+    listContainer.innerHTML = "";
+    if (items.length === 0){
+      listContainer.innerHTML = '<div style="text-align:center; padding:30px; color:#888;"><p>このエリアに条件に合う作品はありません</p><p style="font-size:0.8em;">地図を動かして<br>「このエリアで再検索」を押してください</p></div>';
+      return;
     }
-  }
-
-  function detectCenterCard(layerView, layer) {
-      const container = document.getElementById("art-list-container");
-      const containerRect = container.getBoundingClientRect();
-      const centerY = containerRect.top + containerRect.height / 2;
-      let centerCard = null; let minDistance = Infinity;
-      document.querySelectorAll(".art-card").forEach(card => {
-          const rect = card.getBoundingClientRect();
-          const dist = Math.abs((rect.top + rect.height / 2) - centerY);
-          if (dist < minDistance) { minDistance = dist; centerCard = card; }
+    items.forEach(f => {
+      const p = f.properties, id = p.id;
+      let icons = "";
+      if (hearts.includes(id))  icons += " <span style='color:#ff69b4;'>💖</span>";
+      if (actions.includes(id)) icons += " <span style='color:#fbc02d;'>✨</span>";
+      const ribbon = viewed.includes(id) ? '<div class="ribbon-wrapper"><div class="ribbon-text">鑑賞済</div></div>' : "";
+      const imgUrl = (p.images && p.images[0]) ? DATA_BASE + "/" + p.images[0] : "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
+      const card = document.createElement("div");
+      card.className = "art-card";
+      card.id = "card-" + id;
+      card.innerHTML = ribbon +
+        '<img src="'+imgUrl+'" class="art-card-img" id="img-'+id+'" onerror="this.style.visibility=\'hidden\'">' +
+        '<div class="art-card-info"><div class="art-title">作者：'+(p.field_25||"作者不明")+
+        '<span style="float:right; font-size:0.8em;">'+icons+'</span></div></div>';
+      card.addEventListener("click", () => {
+        highlightCardInSidebar(id);
+        setTimeout(() => { window.location.href = "detail.html?id=" + id; }, 300);
       });
-      if (centerCard) {
-          const oid = parseInt(centerCard.id.replace('card-', ''));
-          if (oid !== highlightedObjectId) {
-            document.querySelectorAll(".art-card").forEach(c => c.classList.remove("active-card"));
-            centerCard.classList.add("active-card");
-            highlightMapPin(oid, layerView);
-          }
-      }
+      listContainer.appendChild(card);
+    });
+    if (items.length === 1) setTimeout(() => highlightCardInSidebar(items[0].properties.id), 100);
   }
 
-  function highlightCardInSidebar(oid, layerView, layer) { 
-      isProgrammaticScroll = true;
-      const target = document.getElementById(`card-${oid}`);
-      if (target) {
-          document.querySelectorAll(".art-card").forEach(c => c.classList.remove("active-card"));
-          target.classList.add("active-card");
-          target.scrollIntoView({ behavior: "smooth", block: "center" });
-          highlightMapPin(oid, layerView);
-          setTimeout(() => { isProgrammaticScroll = false; }, 800);
-      }
+  function highlightCardInSidebar(id){
+    isProgrammaticScroll = true;
+    document.querySelectorAll(".art-card").forEach(c => c.classList.remove("active-card"));
+    const target = document.getElementById("card-" + id);
+    if (target){ target.classList.add("active-card"); target.scrollIntoView({ behavior:"smooth", block:"center" }); }
+    highlightMapPin(id);
+    setTimeout(() => { isProgrammaticScroll = false; }, 800);
   }
 
-  // --- ★修正完了：重複実行を防ぐ最強のトグル機能 ---
-  function setupFilterToggle() {
-    const header = document.querySelector(".filter-main-header");
-    const content = document.querySelector(".filter-content");
-    const icon = document.querySelector(".toggle-icon");
+  function detectCenterCard(){
+    const container = document.getElementById("art-list-container");
+    const rect = container.getBoundingClientRect();
+    const centerY = rect.top + rect.height/2;
+    let best = null, min = Infinity;
+    document.querySelectorAll(".art-card").forEach(card => {
+      const r = card.getBoundingClientRect();
+      const d = Math.abs((r.top + r.height/2) - centerY);
+      if (d < min){ min = d; best = card; }
+    });
+    if (best){
+      const id = best.id.replace("card-", "");
+      if (id !== selectedId){
+        document.querySelectorAll(".art-card").forEach(c => c.classList.remove("active-card"));
+        best.classList.add("active-card");
+        highlightMapPin(id);
+      }
+    }
+  }
+  document.getElementById("art-list-container").addEventListener("scroll", () => {
+    if (!isProgrammaticScroll) detectCenterCard();
+  });
 
-    if (header && content && icon) {
-      // ★ここがポイント！
-      // addEventListener だと命令が積み重なってしまうので、
-      // .onclick を使って「命令は常に1つ」に上書きします。
-      header.onclick = () => {
-        content.classList.toggle("closed");
-        icon.classList.toggle("closed");
-      };
+  // 「このエリアで再検索」
+  const searchBtn = document.getElementById("search-area-btn");
+  map.on("moveend", () => { searchBtn.style.display = "block"; });
+  searchBtn.onclick = () => { renderList(); searchBtn.style.display = "none"; };
+
+  /* ---------- 8. フィルタ操作 ---------- */
+  function applyFilters(){ renderMarkers(); renderList(); updateHeaderStats(); }
+
+  document.querySelectorAll(".chip[data-cat]").forEach(chip => {
+    chip.onclick = () => {
+      document.querySelectorAll(".chip[data-cat]").forEach(c => c.classList.remove("active"));
+      chip.classList.add("active");
+      currentCategory = chip.dataset.cat;
+      applyFilters();
+    };
+  });
+  document.querySelectorAll(".chip[data-phase]").forEach(chip => {
+    chip.onclick = () => {
+      document.querySelectorAll(".chip[data-phase]").forEach(c => c.classList.remove("active"));
+      chip.classList.add("active");
+      currentPhase = chip.dataset.phase;
+      applyFilters();
+    };
+  });
+  const heartBtn = document.getElementById("filter-heart-btn");
+  if (heartBtn) heartBtn.onclick = () => {
+    isHeartFilterOn = !isHeartFilterOn;
+    heartBtn.classList.toggle("active", isHeartFilterOn);
+    heartBtn.innerHTML = isHeartFilterOn ? "💖 共感した" : "♡ 共感した";
+    applyFilters();
+  };
+  const actionBtn = document.getElementById("filter-action-btn");
+  if (actionBtn) actionBtn.onclick = () => {
+    isActionFilterOn = !isActionFilterOn;
+    actionBtn.classList.toggle("active", isActionFilterOn);
+    actionBtn.innerHTML = isActionFilterOn ? "⭐ 実践したい" : "✨ 実践したい";
+    applyFilters();
+  };
+
+  function updateHeaderStats(){
+    document.getElementById("header-heart-count").textContent = getHearts().length;
+    document.getElementById("header-action-count").textContent = getActions().length;
+    const total = ALL.filter(f => !HIDDEN_IDS.includes(f.properties.id)).length;
+    const viewed = getViewed().filter(id => !HIDDEN_IDS.includes(id)).length;
+    const el = document.getElementById("view-count");
+    if (el) el.textContent = viewed + "/" + total;
+  }
+
+  /* ---------- 9. 防災情報パネル・タブ・チュートリアル等 ---------- */
+  const controlPanel = document.getElementById("control-panel");
+  document.getElementById("menu-btn").onclick = () => { controlPanel.style.display = "flex"; };
+  document.getElementById("close-panel-btn").onclick = () => { controlPanel.style.display = "none"; };
+  document.getElementById("open-hazard-btn").onclick = () => {
+    controlPanel.style.display = "flex";
+    document.getElementById("hazard-tab").click();
+    highlightHazardGroup(currentCategory);
+  };
+  ["hazard"].forEach(tab => {
+    const b = document.getElementById(tab + "-tab");
+    if (b) b.onclick = () => {
+      document.getElementById(tab + "-content").style.display = "block";
+    };
+  });
+  function highlightHazardGroup(cat){
+    document.querySelectorAll(".hazard-group").forEach(g => g.classList.remove("highlight"));
+    const id = cat === "mizu" ? "group-mizu" : cat === "jiban" ? "group-jiban" : cat === "jishin" ? "group-jishin" : "";
+    if (id){
+      const t = document.getElementById(id);
+      if (t){ t.classList.add("highlight"); t.scrollIntoView({behavior:"smooth",block:"center"}); setTimeout(() => t.classList.remove("highlight"), 3000); }
     }
   }
 
-  // --- ★チュートリアル機能（修正版） ---
-  function setupTutorial() {
+  // 絞り込みの開閉
+  const fHeader = document.querySelector(".filter-main-header");
+  if (fHeader) fHeader.onclick = () => {
+    document.querySelector(".filter-content").classList.toggle("closed");
+    document.querySelector(".toggle-icon").classList.toggle("closed");
+  };
+
+  // 災害種チップに色ドットを付与
+  function addCategoryDots(){
+    document.querySelectorAll(".chip[data-cat]").forEach(chip => {
+      const cat = chip.dataset.cat;
+      if (cat === "all" || chip.querySelector(".cat-dot")) return;
+      const dot = document.createElement("span");
+      dot.className = "cat-dot"; dot.style.background = CATCOLOR[cat] || "#888";
+      chip.prepend(dot);
+    });
+    ["mizu","jiban","jishin"].forEach(cat => {
+      const head = document.querySelector("#group-"+cat+" .hazard-group-header");
+      if (head && !head.querySelector(".cat-dot")){
+        const dot = document.createElement("span");
+        dot.className = "cat-dot"; dot.style.background = CATCOLOR[cat];
+        head.prepend(dot);
+      }
+    });
+  }
+
+  // トップに戻る
+  const backBtn = document.getElementById("back-to-top-btn");
+  if (backBtn) backBtn.onclick = () => { window.location.href = "../../index.html"; };
+
+  setupTutorial();
+
+  /* ---------- 10. データ読み込み ---------- */
+  const listContainer = document.getElementById("art-list-container");
+  listContainer.innerHTML = '<div style="text-align:center;padding:30px;color:#888;">作品を読み込み中…</div>';
+  fetch(DATA_BASE + "/artworks.geojson")
+    .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(gj => {
+      ALL = gj.features.filter(f => f.properties && f.properties.id && !HIDDEN_IDS.includes(f.properties.id));
+      addCategoryDots();
+      applyFilters();
+      try {
+        const b = L.latLngBounds(ALL.map(f => [f.geometry.coordinates[1], f.geometry.coordinates[0]]));
+        map.fitBounds(b.pad(0.15), { maxZoom:15 });
+      } catch(e){}
+      searchBtn.style.display = "none";
+    })
+    .catch(err => {
+      console.error("作品データの読み込みに失敗", err);
+      listContainer.innerHTML = '<div style="text-align:center;padding:30px;color:#c0503a;">作品データを読み込めませんでした。<br><span style="font-size:.8em;color:#888;">ブラウザで開いているか、data/artworks.geojson の場所をご確認ください。</span></div>';
+    });
+
+  /* ---------- チュートリアル（既存のまま） ---------- */
+  function setupTutorial(){
     const overlay = document.getElementById("tutorial-overlay");
     const helpBtn = document.getElementById("header-help-btn");
-    
-    // HTMLのIDに合わせて修正しました
-    const skipBtn = document.getElementById("skip-btn"); 
+    const skipBtn = document.getElementById("skip-btn");
     const nextBtn = document.getElementById("next-btn");
-    
-    // ページ番号（counterEl）に関するコードは削除しました
-
     const imgEl = document.getElementById("tutorial-img");
     const titleEl = document.getElementById("tutorial-title");
     const descEl = document.getElementById("tutorial-desc");
-    
-    // ドットの取得（HTMLのクラス名 "dot" に合わせました）
     const dots = document.querySelectorAll(".tutorial-dots .dot");
-
     if (!overlay) return;
-
-    // 表示する内容データ
     const steps = [
-      {
-        title: "防災行動マップについて",
-        desc: "このマップでは地域の人が制作した作品を鑑賞をします。<br><strong>作品には、「大切な誰かを守りたい」という</strong><br><strong>作者のメッセージが込められています。</strong>",
-        img: "tutorial_01.png" 
-      },
-      {
-        title: "自分宛ての作品を探す",
-        desc: "<strong>ピンにはメッセージの宛名が書かれています</strong>。<br>「近隣住民へ」「川のそばに住んでいる人へ」など、<br>自分に近い宛名を探してみてください。",
-        img: "tutorial_05.png"
-      },
-      {
-        title: "作品を見つける",
-        desc: "「災害の種類」や「防災行動のタイミング」で<br>自分が見たい作品を絞り込めます。",
-        img: "tutorial_02.png"
-      },
-      {
-        title: "地図を重ねる",
-        desc: "右上の「防災情報」ボタンを押すと、<br>ハザードマップを地図に重ねて確認できます。",
-        img: "tutorial_03.png"
-      },
-      {
-        title: "作品を鑑賞する",
-        desc: "<strong>作品をタップすると鑑賞画面へ進みます。</strong><br>作品の解説や作者が込めたメッセージやを確認しましょう。",
-        img: "tutorial_04.png"
-      }
+      { title:"防災行動マップについて", img:"tutorial_01.png",
+        desc:"このマップでは地域の人が制作した作品を鑑賞します。<br><strong>作品には、「大切な誰かを守りたい」という作者のメッセージが込められています。</strong>" },
+      { title:"自分宛ての作品を探す", img:"tutorial_05.png",
+        desc:"<strong>ピンにはメッセージの宛名が書かれています</strong>。<br>「近隣住民へ」など、自分に近い宛名を探してみてください。" },
+      { title:"作品を見つける", img:"tutorial_02.png",
+        desc:"「災害の種類」や「防災行動のタイミング」で<br>見たい作品を絞り込めます。" },
+      { title:"地図を重ねる", img:"tutorial_03.png",
+        desc:"右上の「防災情報」ボタンを押すと、<br>ハザードマップを地図に重ねて確認できます。" },
+      { title:"作品を鑑賞する", img:"tutorial_04.png",
+        desc:"<strong>作品をタップすると鑑賞画面へ進みます。</strong><br>作者が込めたメッセージを確認しましょう。" }
     ];
-
-    let currentPage = 0;
-
-    // ヘッダーの「？」ボタンを押したとき
-    if(helpBtn) {
-        helpBtn.addEventListener("click", () => {
-            currentPage = 0;
-            updateSlide();
-            overlay.style.display = "flex";
-        });
+    let page = 0;
+    function update(){
+      const s = steps[page];
+      titleEl.textContent = s.title; descEl.innerHTML = s.desc;
+      imgEl.src = s.img; imgEl.onerror = () => { imgEl.style.visibility = "hidden"; };
+      imgEl.onload = () => { imgEl.style.visibility = "visible"; };
+      dots.forEach((d,i) => d.classList.toggle("active", i === page));
+      if (nextBtn) nextBtn.textContent = (page === steps.length-1) ? "完了" : "次へ ＞";
     }
-
-    // スキップボタン
-    if(skipBtn) {
-        skipBtn.addEventListener("click", () => { overlay.style.display = "none"; });
-    }
-
-    // 次へボタン
-    if(nextBtn) {
-        nextBtn.addEventListener("click", () => {
-            if (currentPage < steps.length - 1) {
-                currentPage++;
-                updateSlide();
-            } else {
-                overlay.style.display = "none";
-            }
-        });
-    }
-
-    function updateSlide() {
-        if (!titleEl || !descEl || !imgEl) return;
-        const step = steps[currentPage];
-        titleEl.textContent = step.title;
-        descEl.innerHTML = step.desc;
-        
-        // ページ番号の更新処理は削除しました
-
-        const dummyImage = "https://via.placeholder.com/400x300?text=Image+" + (currentPage + 1);
-        imgEl.src = step.img; 
-        imgEl.onerror = () => { imgEl.src = dummyImage; };
-
-        // ドットの更新
-        dots.forEach((d, i) => { d.classList.toggle("active", i === currentPage); });
-
-        // 最後のページならボタンの文字を変える
-        if (nextBtn) {
-            nextBtn.textContent = (currentPage === steps.length - 1) ? "完了" : "次へ ＞";
-        }
-    }
+    if (helpBtn) helpBtn.onclick = () => { page = 0; update(); overlay.style.display = "flex"; };
+    if (skipBtn) skipBtn.onclick = () => { overlay.style.display = "none"; };
+    if (nextBtn) nextBtn.onclick = () => { if (page < steps.length-1){ page++; update(); } else overlay.style.display = "none"; };
   }
-
-  // --- ★追加：トップに戻るボタンの動作 ---
-    const backBtn = document.getElementById("back-to-top-btn");
-    if (backBtn) {
-        backBtn.addEventListener("click", () => {
-            window.location.href = "/WSsupportApp_202601/index.html"; // トップページへ移動
-        });
-    }
-
-  initializeApp();
 });

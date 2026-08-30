@@ -25,27 +25,12 @@
   </div>
 
   <div class="header-right" id="userNav">
-    <button id="createBtn" class="header-btn create">作品制作<br>ログイン</button>
+    <button id="createBtn" class="header-btn create">作品制作</button>
     <button class="header-btn map">防災行動<br>マップ</button>
   </div>
 </header>
 </header>
-<!-- ===== ログインポップアップ ===== -->
-<div id="loginPopup" class="popup hidden">
-  <div class="popup-content">
-    <h3>ログイン</h3>
-    <input id="email" type="email" placeholder="メールアドレス" autocomplete="username" />
-    <input id="password" type="password" placeholder="パスワード" autocomplete="current-password" />
-    <div class="popup-btns">
-      <button id="loginBtn">ログイン</button>
-      <button id="goRegister">新規登録</button>
-      <button id="closeLoginPopup">閉じる</button>
-    </div>
-  </div>
-</div>
-
-<!-- 🔹 ログイン完了メッセージ -->
-<div id="welcomeMsg" class="hidden"></div>
+<!-- （ログイン/アカウント機能は廃止） -->
 
 
   <main>
@@ -118,7 +103,6 @@
         <button class="create-btn start-create">作品を制作してみる</button>
         <div class="divider">または</div>
         <button id="guestBtn" class="guest-btn">ツール体験に進む</button>
-        <p class="note">ログイン後に作品を保存・共有できます</p>
       </div>
 
       <!-- 右吹き出し -->
@@ -183,18 +167,6 @@
 
   <div class="create-btn-container">
     <button class="create-btn start-create">作品を制作してみる</button>
-<!--    <div class="divider">または</div>
-    <button id="guestBtn" class="guest-btn">ツール体験に進む</button> -->
-    <p>▼アカウント登録済みの方はこちら▼</p>
-
-    <!-- 🔹重複しないよう別IDに変更 -->
-    <input id="registerEmail" type="email" placeholder="メールアドレス（登録用）" autocomplete="username">
-    <input id="registerPassword" type="password" placeholder="パスワード（登録用）" autocomplete="current-password">
-
-    <!-- 🔹ここは「ログインポップを開く」ボタンに変える -->
-    <button id="openLoginPopup">ログイン</button>
-
-    <p class="note">ログイン後に作品を保存・共有できます</p>
   </div>
 </div>
   <!-- 中央：ご近所アートチャットボックス -->
@@ -227,26 +199,9 @@
 
   </section>
 
-  <!-- ===== ポップアップ群 ===== -->
-  <div class="popup" id="choicePopup">
-    <div class="popup-content">
-      <p>アカウントを作成しますか？（特典があります）</p>
-      <button id="withAccount">アカウントを作成して制作</button>
-      <button id="withoutAccount">アカウントを作成せず制作</button>
-      <button class="close-popup" id="closeChoicePopup">キャンセル</button>
-    </div>
-  </div>
+  <!-- （アカウント作成/確認ポップアップは廃止） -->
 
-  <div class="popup" id="confirmPopup">
-    <div class="popup-content">
-      <p>制作した作品は保存されません。<br>よろしいですか？</p>
-      <div class="popup-btn-row">
-        <button id="proceedGuest">アカウントなしで作品制作に進む</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Firebase SDK + top.js -->
+  <!-- top.js（トップページUI） -->
   <script type="module" src="./top/top.js"></script>
 </body>
 </html>
