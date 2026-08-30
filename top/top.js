@@ -226,7 +226,7 @@ document.getElementById("createBtn")?.addEventListener("click", () => {
 
 // ヘッダー「防災行動マップ」ボタン
 document.querySelector(".header-btn.map")?.addEventListener("click", () => {
-  window.location.href = "map/index.html";
+  window.location.href = "workshop/present/index.html";
 });
 
 // 「ツール体験に進む」(#guestBtn) → 体験ページ
