@@ -648,6 +648,30 @@
         ],
         "status": "approved"
       }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.6415105878981,
+          35.52588496782512
+        ]
+      },
+      "properties": {
+        "id": "56",
+        "field_23": null,
+        "field_24": "洪水（外水氾濫）",
+        "field_25": "I",
+        "Message": "I",
+        "collage": "I",
+        "Mabling": "7",
+        "creationDate": "2026-08-31",
+        "images": [
+          "images/56_1.jpg"
+        ],
+        "status": "approved"
+      }
     }
   ]
 }
