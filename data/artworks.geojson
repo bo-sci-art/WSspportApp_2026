@@ -624,6 +624,30 @@
         ],
         "status": "approved"
       }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.63653390115627,
+          35.52758359398654
+        ]
+      },
+      "properties": {
+        "id": "55",
+        "field_23": null,
+        "field_24": "内水氾濫",
+        "field_25": "Test",
+        "Message": "Test",
+        "collage": "Test",
+        "Mabling": "Test",
+        "creationDate": "2026-08-31",
+        "images": [
+          "images/55_1.jpg"
+        ],
+        "status": "approved"
+      }
     }
   ]
 }
