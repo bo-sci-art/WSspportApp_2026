@@ -3,6 +3,7 @@ let dpr = Math.max(1, window.devicePixelRatio || 1);
 const canvas = document.getElementById('stage');
 const ctx = canvas.getContext('2d');
 const stageWrap = document.getElementById('stageWrap');
+const trashZoneEl = document.getElementById('trashZone');
 let cssW = canvas.clientWidth, cssH = canvas.clientHeight;
 
 function resizeCanvasToCSS() {
@@ -248,113 +249,94 @@ function getTintedImage(img, color){
 }
 
 
-// ★ ADD: handle constants & drag state
-const HANDLE_SIZE = 10;     // screen px
-const ROTATE_DIST = 28;     // screen px above top edge
-const ROTATE_R    = 10;     // screen px radius
+// ★ 選択枠の見た目定数（装飾のみ。四隅ドラッグ／回転ハンドルは廃止し、操作はジェスチャーに統一）
+const SELECT_PADDING = 10;   // CSS px: 本体との間隔
+const SELECT_RADIUS  = 14;   // CSS px: 角丸半径
+const BRACKET_LEN    = 16;   // CSS px: 角ブラケットの一辺の長さ
 
-let dragMode = 'none';      // 'none' | 'move' | 'resize' | 'rotate'
-let dragHandleIndex = -1;   // 0:TL,1:TR,2:BR,3:BL
-let dragStart = null;       // { sx, sy, x, y, scale, angleRad, angle0, dist0 }
+let dragMode = 'none';       // 'none' | 'move' | 'pinch' | 'pending' | 'multi-idle'
+let lastPointerType = 'touch'; // 直近の入力デバイス種別。'mouse'ならレガシーなハンドル操作を有効化する
 
-// ★ ADD: local rect of selected stamp (center-origin, after scale)
+// ★ マウス（PC）専用：角ハンドルでリサイズ／回転ハンドルで回転（タッチのピンチ操作の代替）
+const MOUSE_HANDLE_HIT   = 10; // CSS px：角ハンドルの当たり判定半径（マウスは指と違い高精度なので十分）
+const MOUSE_ROTATE_DIST  = 26; // CSS px：選択枠上辺から回転ハンドルまでの距離
+const MOUSE_ROTATE_HIT   = 8;  // CSS px：回転ハンドルの当たり判定半径
+
+// キャンバス座標(CSS px)をスタンプのローカル座標（中心原点・逆回転済み）へ変換
+function toLocal(s, px, py) {
+  const dx = px - s.x, dy = py - s.y;
+  const rad = (s.angleDeg || 0) * Math.PI / 180;
+  const c = Math.cos(-rad), si = Math.sin(-rad);
+  return { x: dx * c - dy * si, y: dx * si + dy * c };
+}
+
+// 選択中スタンプに限定してハンドルの当たり判定を行う（旧実装は全スタンプに対して判定しており、
+// それが「別のスタンプが誤って掴まれる」原因だったため、選択中スタンプのみに限定している）
+function hitMouseHandle(s, localX, localY) {
+  const r = localRectOf(s);
+  const pad = SELECT_PADDING;
+  const rr = { x: r.x - pad, y: r.y - pad, w: r.w + pad * 2, h: r.h + pad * 2 };
+
+  const topCenter = { x: rr.x + rr.w / 2, y: rr.y };
+  const rotPos = { x: topCenter.x, y: topCenter.y - MOUSE_ROTATE_DIST };
+  if (Math.hypot(localX - rotPos.x, localY - rotPos.y) <= MOUSE_ROTATE_HIT + 4) {
+    return { mode: 'rotate' };
+  }
+
+  const corners = [
+    { x: rr.x,         y: rr.y,         idx: 0 }, // TL
+    { x: rr.x + rr.w,  y: rr.y,         idx: 1 }, // TR
+    { x: rr.x + rr.w,  y: rr.y + rr.h,  idx: 2 }, // BR
+    { x: rr.x,         y: rr.y + rr.h,  idx: 3 }, // BL
+  ];
+  for (const c of corners) {
+    if (Math.abs(localX - c.x) <= MOUSE_HANDLE_HIT && Math.abs(localY - c.y) <= MOUSE_HANDLE_HIT) {
+      return { mode: 'resize', handleIndex: c.idx };
+    }
+  }
+  return { mode: 'none' };
+}
+
+function getResizeCursor(handleIndex) {
+  return (handleIndex === 0 || handleIndex === 2) ? 'nwse-resize' : 'nesw-resize';
+}
+
+// ★ local rect of selected stamp (center-origin, after scale)
 function localRectOf(s) {
   const w = s.w * s.scale;
   const h = s.h * s.scale;
   return { x: -w/2, y: -h/2, w, h };
 }
 
-// ★ ADD: local -> screen (consider rotation and dpr)
-function localToScreen(s, pt) {
-  const rad = (s.angleDeg || 0) * Math.PI / 180;
-  const c = Math.cos(rad), si = Math.sin(rad);
-  const wx = s.x + pt.x * c - pt.y * si; // CSS px
-  const wy = s.y + pt.x * si + pt.y * c; // CSS px
-  return { x: wx * dpr, y: wy * dpr };   // screen px
+// 角丸矩形のパス
+function roundRectPath(c, x, y, w, h, radius) {
+  const r = Math.max(0, Math.min(radius, w/2, h/2));
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y,     x + w, y + h, r);
+  c.arcTo(x + w, y + h, x,     y + h, r);
+  c.arcTo(x,     y + h, x,     y,     r);
+  c.arcTo(x,     y,     x + w, y,     r);
+  c.closePath();
 }
 
-// ★ ADD: screen -> local
-function screenToLocal(s, sx, sy) {
-  const x = sx / dpr, y = sy / dpr;      // CSS px
-  const dx = x - s.x, dy = y - s.y;
-  const rad = (s.angleDeg || 0) * Math.PI / 180;
-  const c = Math.cos(-rad), si = Math.sin(-rad);
-  return { x: dx * c - dy * si, y: dx * si + dy * c };
-}
-
-// ★ ADD: primitives in screen space (no current transform)
-function drawScreenSquare(cx, cy, size, color) {
-  ctx.save();
-  ctx.setTransform(1,0,0,1,0,0);
-  ctx.fillStyle = color;
-  ctx.fillRect(cx - size/2, cy - size/2, size, size);
-  ctx.restore();
-}
-function drawScreenCircle(cx, cy, r, color) {
-  ctx.save();
-  ctx.setTransform(1,0,0,1,0,0);
-  ctx.fillStyle = color;
-  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
-  ctx.restore();
-}
-function drawScreenLine(x1, y1, x2, y2, color) {
-  ctx.save();
-  ctx.setTransform(1,0,0,1,0,0);
-  ctx.strokeStyle = color;
-  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-  ctx.restore();
-}
-
-const HANDLE_HIT_PAD = 12; // ← 触りやすさ向上ぶん
-// ハンドルのヒットテスト（優先度：回転 > 角ハンドル > なし）
-// 引数 sx, sy は「スクリーンpx」（= clientX * devicePixelRatio）
-
-function hitTestHandles(s, sx, sy) {
-  const r = localRectOf(s);
-
-  // 回転ハンドル（上辺から距離 ROTATE_DIST）
-  const topCenter = { x: r.x + r.w/2, y: r.y };
-  const rotPosLocal = { x: topCenter.x, y: topCenter.y - (ROTATE_DIST / dpr) };
-  const rotPos = localToScreen(s, rotPosLocal);
-  const dx = rotPos.x - sx, dy = rotPos.y - sy;
-  if (Math.hypot(dx, dy) <= (ROTATE_R + HANDLE_HIT_PAD)) {
-    return { mode: 'rotate' };
-  }
-
-  // 角ハンドル（四角）…描画10pxだがヒットは広め
+// 選択中スタンプの角に出すL字ブラケット（装飾のみ。固定pxで描くのでスタンプが小さくても潰れない）
+function drawCornerBrackets(c, rect, len) {
+  const { x, y, w, h } = rect;
   const corners = [
-    { x: r.x,       y: r.y       }, // 0:TL
-    { x: r.x+r.w,   y: r.y       }, // 1:TR
-    { x: r.x+r.w,   y: r.y+r.h   }, // 2:BR
-    { x: r.x,       y: r.y+r.h   }, // 3:BL
+    [x,     y,      1,  0,  0,  1],  // TL
+    [x + w, y,     -1,  0,  0,  1],  // TR
+    [x + w, y + h, -1,  0,  0, -1],  // BR
+    [x,     y + h,  1,  0,  0, -1],  // BL
   ];
-  const halfHit = (HANDLE_SIZE/2) + HANDLE_HIT_PAD; // ← 実ヒット半径
-  for (let i=0;i<corners.length;i++){
-    const p = localToScreen(s, corners[i]);
-    if (Math.abs(p.x - sx) <= halfHit && Math.abs(p.y - sy) <= halfHit) {
-      return { mode: 'resize', handleIndex: i };
-    }
+  c.beginPath();
+  for (const [cx, cy, dx1, dy1, dx2, dy2] of corners) {
+    c.moveTo(cx + dx1 * len, cy + dy1 * len);
+    c.lineTo(cx, cy);
+    c.lineTo(cx + dx2 * len, cy + dy2 * len);
   }
-
-  return { mode: 'none' };
+  c.stroke();
 }
-
-// 追加：選択枠の“周辺”ヒット（外しても新規配置しない用）
-function isNearSelectionScreen(s, sx, sy) {
-  const r = localRectOf(s);
-  // ローカル矩形の4隅をスクリーンに
-  const pTL = localToScreen(s, {x:r.x,       y:r.y});
-  const pTR = localToScreen(s, {x:r.x+r.w,   y:r.y});
-  const pBR = localToScreen(s, {x:r.x+r.w,   y:r.y+r.h});
-  const pBL = localToScreen(s, {x:r.x,       y:r.y+r.h});
-  // 軽量化のため“外接AABB”で判定（ねじれ少ないので十分）
-  const minX = Math.min(pTL.x, pTR.x, pBR.x, pBL.x) - (HANDLE_HIT_PAD*2);
-  const maxX = Math.max(pTL.x, pTR.x, pBR.x, pBL.x) + (HANDLE_HIT_PAD*2);
-  const minY = Math.min(pTL.y, pTR.y, pBR.y, pBL.y) - (HANDLE_HIT_PAD*2);
-  const maxY = Math.max(pTL.y, pTR.y, pBR.y, pBL.y) + (HANDLE_HIT_PAD*2);
-  return (sx >= minX && sx <= maxX && sy >= minY && sy <= maxY);
-}
-
 
 function render(){
   ctx.clearRect(0,0,cssW,cssH);
@@ -394,38 +376,56 @@ function render(){
   if (selectedIndex >= 0) {
     const s = stamps[selectedIndex];
     const r = localRectOf(s);
+    const pad = SELECT_PADDING;
+    const rr = { x: r.x - pad, y: r.y - pad, w: r.w + pad * 2, h: r.h + pad * 2 };
 
-    // 緑枠（ローカル空間で描画）
     ctx.save();
     ctx.translate(s.x, s.y);
     const rad = (s.angleDeg || 0) * Math.PI / 180;
     ctx.rotate(rad);
-    ctx.strokeStyle = '#22c55e';
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(r.x, r.y, r.w, r.h);
+
+    // ふんわりした選択グロー（角丸矩形）
+    ctx.save();
+    ctx.shadowColor = 'rgba(99,102,241,0.55)';
+    ctx.shadowBlur = 16;
+    ctx.strokeStyle = 'rgba(99,102,241,0.9)';
+    ctx.lineWidth = 2;
+    roundRectPath(ctx, rr.x, rr.y, rr.w, rr.h, SELECT_RADIUS);
+    ctx.stroke();
     ctx.restore();
 
-    // 角ハンドル（画面空間で固定サイズ）
-    const corners = [
-      { x: r.x,       y: r.y       }, // TL
-      { x: r.x+r.w,   y: r.y       }, // TR
-      { x: r.x+r.w,   y: r.y+r.h   }, // BR
-      { x: r.x,       y: r.y+r.h   }, // BL
-    ];
-    for (const c of corners) {
-      const p = localToScreen(s, c);
-      drawScreenSquare(p.x, p.y, HANDLE_SIZE, '#22c55e');
+    // 角のL字ブラケット（白縁＋アクセント色の二重線で視認性を確保）
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 4;
+    drawCornerBrackets(ctx, rr, BRACKET_LEN);
+    ctx.strokeStyle = '#6366f1';
+    ctx.lineWidth = 2.4;
+    drawCornerBrackets(ctx, rr, BRACKET_LEN);
+
+    // マウス操作時のみ：回転ハンドル（PC向けレガシー操作の取っ手）
+    if (lastPointerType === 'mouse') {
+      const topCenter = { x: rr.x + rr.w / 2, y: rr.y };
+      const rotPos = { x: topCenter.x, y: topCenter.y - MOUSE_ROTATE_DIST };
+      ctx.strokeStyle = '#6366f1';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(topCenter.x, topCenter.y);
+      ctx.lineTo(rotPos.x, rotPos.y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(rotPos.x, rotPos.y, MOUSE_ROTATE_HIT, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.strokeStyle = '#6366f1';
+      ctx.lineWidth = 2;
+      ctx.stroke();
     }
 
-    // 回転ハンドル（上辺の外）
-    const topCenter = { x: r.x + r.w/2, y: r.y };
-    const rotPosLocal = { x: topCenter.x, y: topCenter.y - (ROTATE_DIST / dpr) };
-    const a = localToScreen(s, topCenter);
-    const b = localToScreen(s, rotPosLocal);
-    drawScreenLine(a.x, a.y, b.x, b.y, '#22c55e');
-    drawScreenCircle(b.x, b.y, ROTATE_R, '#22c55e');
+    ctx.restore();
   }
 }
+
 
 // 既存のすぐ上/下どこでもOK
 const ALPHA_MIN = 0.2;
@@ -700,73 +700,55 @@ window.addEventListener('keydown', (e) => {
 });
 
 
-// --- 配置＆ドラッグ ---
+// --- 配置＆ドラッグ（1本指: 移動 / 空タップで新規配置 / ドラッグでゴミ箱へ削除、2本指: ピンチ拡縮＋回転） ---
 let dragging = false;
 let dragDX = 0, dragDY = 0;
+let pendingCreate = null; // 空白タップの仮位置。2本目の指が触れたらピンチ優先にするため pointerup で確定させる
+let mouseDragStart = null; // マウスの角ハンドル／回転ハンドル操作の開始状態
 
-canvas.addEventListener('pointerdown', (ev)=>{
-  //if (!baseImg) return;
-  canvas.setPointerCapture(ev.pointerId);
-  const p  = clientToCanvas(ev);
-  // キャンバス相対のスクリーンpxに統一
-  const sx = p.x * dpr;
-  const sy = p.y * dpr;
+const activePointers = new Map(); // pointerId -> {x, y} CSS px（キャンバス相対）
+let pinchStart = null;            // { dist, angRad, scale, angleDeg }
 
-  // check handles from top-most
-  for (let i = stamps.length - 1; i >= 0; i--) {
-    const s = stamps[i];
-    const h = hitTestHandles(s, sx, sy);
-    if (h.mode !== 'none') {
-      selectIndex(i);
-      dragMode = h.mode;
-      dragHandleIndex = h.handleIndex ?? -1;
-      dragStart = {
-        sx, sy,
-        x: s.x, y: s.y,
-        scale: s.scale,
-        angleRad: (s.angleDeg || 0) * Math.PI / 180,
-        angle0: Math.atan2((sy/dpr) - s.y, (sx/dpr) - s.x),
-        dist0: Math.hypot((sx/dpr) - s.x, (sy/dpr) - s.y)
-      };
-      render();
-      return;
-    }
-    // body move (existing logic)
-    if (hitTest(p.x, p.y, s)) {
-      selectIndex(i);
-      dragMode = 'move';
-      dragHandleIndex = -1;
-      dragging = true; // keep existing flag
-      dragDX = p.x - s.x;
-      dragDY = p.y - s.y;
-      dragStart = { sx, sy, x: s.x, y: s.y };
-      render();
-      return;
-    }
-  }
+function twoPointerMetrics() {
+  const pts = Array.from(activePointers.values());
+  if (pts.length < 2) return null;
+  const [p1, p2] = pts;
+  return {
+    dist: Math.hypot(p2.x - p1.x, p2.y - p1.y),
+    angRad: Math.atan2(p2.y - p1.y, p2.x - p1.x)
+  };
+}
 
-  // 枠の近くで外しただけなら、新規配置しない（誤配置防止）
-  if (selectedIndex >= 0) {
-    const sSel = stamps[selectedIndex];
-    if (isNearSelectionScreen(sSel, sx, sy)) {
-      return; // 何もしない
-    }
-  }
+const TRASH_HIT_PAD = 14; // trashZoneの当たり判定に足すpx（見た目より少し広めに）
+function getTrashRect() {
+  return trashZoneEl ? trashZoneEl.getBoundingClientRect() : null;
+}
+function isOverTrash(clientX, clientY) {
+  const rc = getTrashRect();
+  if (!rc) return false;
+  return clientX >= rc.left - TRASH_HIT_PAD && clientX <= rc.right + TRASH_HIT_PAD &&
+         clientY >= rc.top  - TRASH_HIT_PAD && clientY <= rc.bottom + TRASH_HIT_PAD;
+}
+function setTrashArmed(on) { trashZoneEl?.classList.toggle('armed', !!on); }
+function showTrash(show) {
+  if (!trashZoneEl) return;
+  trashZoneEl.classList.toggle('visible', !!show);
+  if (!show) setTrashArmed(false);
+}
 
-  // no hit -> create new stamp (keep your existing new-stamp block unchanged)
-  // (Your existing new-stamp code here; do not duplicate)
+function createStampAt(x, y) {
   if (!currentStampTex) return;
   const { w: iw, h: ih } = imageSizeFromTex(currentStampTex);
   const baseScale = defaultScaleForTex(currentStampTex);
   const multiplier = 1.0;
   const scale = baseScale * multiplier;
   // 透明度スライダー値 s を alpha に反転
-  const s = alphaEl ? Number(alphaEl.value) : ALPHA_MAX; // 右端=1→透明度100%
-  const alpha = (ALPHA_MIN + ALPHA_MAX) - s;
+  const sVal = alphaEl ? Number(alphaEl.value) : ALPHA_MAX; // 右端=1→透明度100%
+  const alpha = (ALPHA_MIN + ALPHA_MAX) - sVal;
   const stamp = {
     id: `${currentStampId || 'stamp'}-${Date.now()}`,
     tex: currentStampTex,
-    x: p.x, y: p.y,
+    x, y,
     w: iw, h: ih,
     baseScale,
     scale,
@@ -778,11 +760,80 @@ canvas.addEventListener('pointerdown', (ev)=>{
     flipX: false,
     flipY: false
   };
-
   stamps.push(stamp);
   selectIndex(stamps.length - 1);
   render();
   pushHistory();
+}
+
+canvas.addEventListener('pointerdown', (ev)=>{
+  canvas.setPointerCapture(ev.pointerId);
+  const prevPointerType = lastPointerType;
+  lastPointerType = ev.pointerType || 'mouse';
+  const p = clientToCanvas(ev);
+  activePointers.set(ev.pointerId, { x: p.x, y: p.y });
+
+  // マウス操作：選択中スタンプの角ハンドル／回転ハンドルを優先判定（PC向けレガシー操作。
+  // 選択中スタンプ1つに限定しているので、他スタンプを誤って掴む問題は起きない）
+  if (ev.pointerType === 'mouse' && selectedIndex >= 0) {
+    const s = stamps[selectedIndex];
+    const lp = toLocal(s, p.x, p.y);
+    const h = hitMouseHandle(s, lp.x, lp.y);
+    if (h.mode === 'resize') {
+      dragMode = 'mouse-resize';
+      mouseDragStart = { scale: s.scale, dist0: Math.max(1e-6, Math.hypot(p.x - s.x, p.y - s.y)) };
+      render();
+      return;
+    }
+    if (h.mode === 'rotate') {
+      dragMode = 'mouse-rotate';
+      mouseDragStart = { angle0: Math.atan2(p.y - s.y, p.x - s.x), angleRad: (s.angleDeg || 0) * Math.PI / 180 };
+      render();
+      return;
+    }
+  }
+
+  // 2本指目：選択中スタンプがあればピンチ拡縮＋回転ジェスチャーへ（指の位置はスタンプの上でなくてもよい）
+  if (activePointers.size >= 2) {
+    dragging = false;
+    showTrash(false);
+    pendingCreate = null;
+    if (selectedIndex >= 0) {
+      const s = stamps[selectedIndex];
+      const m = twoPointerMetrics();
+      dragMode = 'pinch';
+      pinchStart = {
+        dist: Math.max(1e-6, m.dist),
+        angRad: m.angRad,
+        scale: s.scale,
+        angleDeg: s.angleDeg || 0
+      };
+    } else {
+      dragMode = 'multi-idle'; // 対象がないので何もしない
+    }
+    render();
+    return;
+  }
+
+  // 1本指：既存スタンプ本体に当たれば選択して移動開始
+  for (let i = stamps.length - 1; i >= 0; i--) {
+    const s = stamps[i];
+    if (hitTest(p.x, p.y, s)) {
+      selectIndex(i);
+      dragMode = 'move';
+      dragging = true;
+      dragDX = p.x - s.x;
+      dragDY = p.y - s.y;
+      showTrash(true);
+      render();
+      return;
+    }
+  }
+
+  // 何にも当たらなかった：即座には配置せず保留（この直後に2本目が触れたらピンチ優先）
+  if (!currentStampTex) return;
+  pendingCreate = { x: p.x, y: p.y };
+  dragMode = 'pending';
 });
 
 // ======== 初期スケール算出（「良い感じ」の大きさ） ========
@@ -795,90 +846,147 @@ function defaultScaleForTex(img){
   return targetDisplayWidth / iw;
 }
 
-// 角ハンドルに応じたカーソル（回転は考慮せずシンプルに）
-function getResizeCursorByHandleIndex(handleIndex) {
-  // 0:TL, 1:TR, 2:BR, 3:BL
-  return (handleIndex === 0 || handleIndex === 2) ? 'nwse-resize' : 'nesw-resize';
-}
-
-
 canvas.addEventListener('pointermove', (ev)=>{
-  if (dragMode === 'none') {
-    if (selectedIndex >= 0) {
-      const s  = stamps[selectedIndex];
-      const p  = clientToCanvas(ev);   // CSS px
-      const sx = p.x * dpr;            // 画面px（ハンドル判定用）
-      const sy = p.y * dpr;
+  if (ev.pointerType && ev.pointerType !== lastPointerType) {
+    lastPointerType = ev.pointerType;
+    if (selectedIndex >= 0) render(); // 回転ハンドルの表示切り替えのため再描画
+  }
 
-      const h = hitTestHandles(s, sx, sy);
-      if (h.mode === 'resize') {
-        // 角ハンドル上：対角線リサイズカーソル
-        canvas.style.cursor = getResizeCursorByHandleIndex(h.handleIndex ?? -1);
-      } else if (h.mode === 'rotate') {
-        // 回転ハンドル上：回転カーソル
-        canvas.style.cursor = 'grab'; 
-      } else if (hitTest(p.x, p.y, s)) {
-        // 本体の上：移動カーソル
-        canvas.style.cursor = 'move';
+  if (!activePointers.has(ev.pointerId)) {
+    // マウス等：ホバー時のカーソル表示
+    if (dragMode === 'none' && selectedIndex >= 0) {
+      const s = stamps[selectedIndex];
+      const p = clientToCanvas(ev);
+      if (ev.pointerType === 'mouse') {
+        const lp = toLocal(s, p.x, p.y);
+        const h = hitMouseHandle(s, lp.x, lp.y);
+        if (h.mode === 'resize') canvas.style.cursor = getResizeCursor(h.handleIndex);
+        else if (h.mode === 'rotate') canvas.style.cursor = 'grab';
+        else canvas.style.cursor = hitTest(p.x, p.y, s) ? 'move' : 'default';
       } else {
-        canvas.style.cursor = 'default';
+        canvas.style.cursor = hitTest(p.x, p.y, s) ? 'move' : 'default';
       }
-    } else {
+    } else if (dragMode === 'none') {
       canvas.style.cursor = 'default';
     }
-  }
-
-  if (selectedIndex < 0) return;
-
-  const s = stamps[selectedIndex];
-  const p  = clientToCanvas(ev);
-  const sx = p.x * dpr;
-  const sy = p.y * dpr;
-
-  if (dragMode === 'rotate') {
-    const angle = Math.atan2((sy/dpr) - s.y, (sx/dpr) - s.x);
-    const delta = angle - dragStart.angle0;
-    const rad = dragStart.angleRad + delta;
-    s.angleDeg = (rad * 180 / Math.PI) % 360;
-    render();
     return;
   }
+  const p = clientToCanvas(ev);
+  activePointers.set(ev.pointerId, { x: p.x, y: p.y });
 
-  if (dragMode === 'resize') {
-    const dist = Math.hypot((sx/dpr) - s.x, (sy/dpr) - s.y);
-    const ratio = dist / Math.max(1e-6, dragStart.dist0);
-    const newScale = dragStart.scale * ratio;
-
+  if (dragMode === 'mouse-resize' && selectedIndex >= 0) {
+    const s = stamps[selectedIndex];
+    const dist = Math.hypot(p.x - s.x, p.y - s.y);
+    const ratio = dist / mouseDragStart.dist0;
     const minScaleW = 16 / s.w;
     const minScaleH = 16 / s.h;
-    s.scale = Math.max(newScale, Math.max(minScaleW, minScaleH));
-
+    s.scale = Math.max(mouseDragStart.scale * ratio, Math.max(minScaleW, minScaleH));
     render();
     return;
   }
 
-  if (dragMode === 'move' && dragging) {
-    const p = clientToCanvas(ev);
+  if (dragMode === 'mouse-rotate' && selectedIndex >= 0) {
+    const s = stamps[selectedIndex];
+    const angle = Math.atan2(p.y - s.y, p.x - s.x);
+    const delta = angle - mouseDragStart.angle0;
+    s.angleDeg = ((mouseDragStart.angleRad + delta) * 180 / Math.PI) % 360;
+    render();
+    return;
+  }
+
+  if (dragMode === 'pinch' && pinchStart && selectedIndex >= 0) {
+    const m = twoPointerMetrics();
+    if (!m) return;
+    const s = stamps[selectedIndex];
+    const ratio = m.dist / pinchStart.dist;
+    const minScaleW = 16 / s.w;
+    const minScaleH = 16 / s.h;
+    s.scale = Math.max(pinchStart.scale * ratio, Math.max(minScaleW, minScaleH));
+    const deltaAngDeg = (m.angRad - pinchStart.angRad) * 180 / Math.PI;
+    s.angleDeg = (pinchStart.angleDeg + deltaAngDeg) % 360;
+    render();
+    return;
+  }
+
+  if (dragMode === 'move' && dragging && selectedIndex >= 0) {
+    const s = stamps[selectedIndex];
     s.x = p.x - dragDX;
     s.y = p.y - dragDY;
+    setTrashArmed(isOverTrash(ev.clientX, ev.clientY));
     render();
   }
 });
 
-canvas.addEventListener('pointerleave', ()=>{
-  if (dragMode === 'none') canvas.style.cursor = 'default';
+canvas.addEventListener('pointerleave', (ev)=>{
+  if (!activePointers.has(ev.pointerId) && dragMode === 'none') {
+    canvas.style.cursor = 'default';
+  }
 });
 
-canvas.addEventListener('pointerup', (ev)=>{
-  if (dragMode !== 'none' || dragging) {
-    pushHistory();
-  }
-  dragging = false;
-  dragMode = 'none';
-  dragHandleIndex = -1;
-  dragStart = null;
+function endPointer(ev) {
+  activePointers.delete(ev.pointerId);
   canvas.releasePointerCapture?.(ev.pointerId);
-});
+
+  if (dragMode === 'mouse-resize' || dragMode === 'mouse-rotate') {
+    if (selectedIndex >= 0) pushHistory();
+    mouseDragStart = null;
+    dragMode = 'none';
+    return;
+  }
+
+  if (dragMode === 'pending') {
+    if (pendingCreate) createStampAt(pendingCreate.x, pendingCreate.y);
+    pendingCreate = null;
+    dragMode = 'none';
+    return;
+  }
+
+  if (dragMode === 'multi-idle') {
+    if (activePointers.size < 2) dragMode = 'none';
+    return;
+  }
+
+  if (dragMode === 'pinch') {
+    if (selectedIndex >= 0) pushHistory();
+    pinchStart = null;
+    if (activePointers.size === 1 && selectedIndex >= 0) {
+      // 1本になった指でそのまま移動へシームレスに継続
+      const s = stamps[selectedIndex];
+      const [remaining] = activePointers.values();
+      dragMode = 'move';
+      dragging = true;
+      dragDX = remaining.x - s.x;
+      dragDY = remaining.y - s.y;
+      showTrash(true);
+    } else {
+      dragMode = 'none';
+    }
+    render();
+    return;
+  }
+
+  if (dragMode === 'move') {
+    const wasArmed = isOverTrash(ev.clientX, ev.clientY);
+    showTrash(false);
+    if (wasArmed && selectedIndex >= 0) {
+      stamps.splice(selectedIndex, 1);
+      selectedIndex = -1;
+      pushHistory();
+      refreshUndoRedo();
+    } else {
+      pushHistory();
+    }
+    dragging = false;
+    dragMode = 'none';
+    render();
+    return;
+  }
+
+  dragMode = 'none';
+}
+
+canvas.addEventListener('pointerup', endPointer);
+canvas.addEventListener('pointercancel', endPointer);
 
 const saveBtn = document.getElementById('saveBtn');
 if (saveBtn) {

@@ -307,6 +307,34 @@ main { overflow: hidden; }
   touch-action: none;           /* 念のため canvas 本体にも */
 }
 
+/* ゴミ箱ドロップゾーン（1本指ドラッグ中だけ表示。Instagram風の削除ジェスチャー） */
+#trashZone {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translate(-50%, 20px) scale(.85);
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 17, 21, 0.75);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(0,0,0,.28);
+  opacity: 0;
+  pointer-events: none;  /* 当たり判定はJS側でgetBoundingClientRectを見て行うため、要素自体はイベントを奪わない */
+  transition: opacity .18s ease, transform .18s ease, background .15s ease;
+  z-index: 5;
+}
+#trashZone.visible {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+#trashZone.armed {
+  background: #ef4444;
+  transform: translate(-50%, 0) scale(1.15);
+}
+
 /* swatchボタンはCSS変数 --swatch-color で塗る */
 .swatches .swatch{
   width: 28px;
