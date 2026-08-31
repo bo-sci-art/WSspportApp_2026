@@ -309,3 +309,8 @@ body {
         width: 100%;
     }
 }
+
+/* ===== 次へボタン到達性: ページ全体をスクロール可能に（固定100vh+overflow:hiddenの上書き） ===== */
+html, body { height: auto !important; min-height: 100vh; overflow-y: auto !important; }
+.container { height: auto !important; min-height: 100vh; overflow: visible !important; }
+.content { overflow: visible !important; }

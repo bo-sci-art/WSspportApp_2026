@@ -367,3 +367,7 @@
     color: #64748b;
   }
 }
+/* ===== モバイルはみ出し修正: カードを画面内に収める（box-sizing欠落の修正） ===== */
+.tour-popover { box-sizing: border-box; }
+.tour-popover__skip { width: auto; min-width: 34px; height: 28px; padding: 0 10px; white-space: nowrap; }
+.tour-popover__title { padding-right: 56px; }

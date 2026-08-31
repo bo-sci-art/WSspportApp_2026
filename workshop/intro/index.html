@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>ワークショップ導入スライド（Vanilla JS）</title>
   <!-- 1ファイル完結版。Reactやビルド不要。VSCodeのLive Serverで開けばOK -->
   <style>
@@ -48,6 +48,8 @@
     .btn-primary{ background:var(--green-600); color:#fff; border-color:transparent }
     .btn-primary:hover{ background:var(--green-700) }
     .btn:hover{ transform:translateY(-1px) }
+    #next{ padding:16px 34px; font-size:1.08rem; font-weight:700; border-radius:14px; }
+    #next:disabled{ opacity:.5 }
 
     /* Dots */
     .dots{ display:flex; gap:8px; align-items:center }
@@ -186,13 +188,14 @@
       {
         id: 5,
         title: "本日の流れ",
-        subtitle: "1時間で体験するステップ",
+        subtitle: "全体の流れ（約85分）",
         html: `
           <ul class="list">
-            <li>ハザードマップの読み取りと地点/区域の選定（15分）</li>
-            <li>マーブリングを用いた作品制作（20分）</li>
+            <li>ハザードマップの読み取り、対象地点／区域の選定、防災メッセージの決定（15分）</li>
+            <li>マーブリング等を用いた作品制作（20分）</li>
             <li>コラージュを用いた作品制作（20分）</li>
-            <li>防災メッセージ・作品説明の作成（15分）</li>
+            <li>作品文章（防災メッセージ・作品説明）の作成（15分）</li>
+            <li>作品発表・鑑賞と講評・コミュニケーション（15分）</li>
 
             <p class="mt"><strong>各セクションで「ミッション」を確認し、作品の完成を目指しましょう！</strong></p>
           </ul>

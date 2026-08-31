@@ -1767,3 +1767,15 @@ html, body {
 .verification-box-container { flex: 0 0 auto; }
 .map-wrapper { flex: 0 0 auto; height: 300px; min-height: 300px; }
 .right-column { overflow-y: auto; }
+
+/* ===== モバイル鑑賞レイアウト改善（STEP1ハザード操作の到達性確保） ===== */
+@media (max-width: 760px) {
+  .content-container { flex-direction: column; gap: 14px; overflow-y: auto; }
+  .column { flex: 0 0 auto; width: 100%; }
+  .left-column { max-height: 34vh; }
+  .left-column .art-panel { max-height: 30vh; }
+  .left-column .art-panel img { max-height: 30vh; width: auto; margin: 0 auto; display: block; }
+  .right-column { overflow: visible; }
+  .info-box-container { max-height: 28vh; overflow-y: auto; }
+  .map-wrapper { height: 320px !important; min-height: 320px; }
+}
