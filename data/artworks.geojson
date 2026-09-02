@@ -696,6 +696,30 @@
         ],
         "status": "approved"
       }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.64781761169436,
+          35.53845629890696
+        ]
+      },
+      "properties": {
+        "id": "58",
+        "field_23": null,
+        "field_24": "土砂災害（急傾斜地の崩壊）, 津波",
+        "field_25": "ペンネーム",
+        "Message": "タイトル",
+        "collage": "防災行動",
+        "Mabling": "表現した災害リスクについて",
+        "creationDate": "2026-09-02",
+        "images": [
+          "images/58_1.jpg"
+        ],
+        "status": "approved"
+      }
     }
   ]
 }
