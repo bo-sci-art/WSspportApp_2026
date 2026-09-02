@@ -672,6 +672,30 @@
         ],
         "status": "approved"
       }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.64172363281253,
+          35.54273861183838
+        ]
+      },
+      "properties": {
+        "id": "57",
+        "field_23": null,
+        "field_24": "地震の揺れ（震度）, 液状化に関わる低地（参考）",
+        "field_25": "ペンネーム",
+        "Message": "作品タイトル（メッセージ）",
+        "collage": "・どんな行動や備えを表現しましたか？\n\n・その行動をしてほしいのは、誰ですか？\n（住民／通勤・通学者／買い物客／旅行者 など）",
+        "Mabling": "・模様は、どんなことをイメージしていますか？\n\n・色は、何を表していますか？",
+        "creationDate": "2026-09-02",
+        "images": [
+          "images/57_1.jpg"
+        ],
+        "status": "approved"
+      }
     }
   ]
 }
