@@ -720,6 +720,30 @@
         ],
         "status": "approved"
       }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.5666075745032,
+          35.51691686781335
+        ]
+      },
+      "properties": {
+        "id": "59",
+        "field_23": null,
+        "field_24": "洪水（外水氾濫）",
+        "field_25": "あ",
+        "Message": "北側に向かって避難",
+        "collage": "北側に避難すること",
+        "Mabling": "青　川の氾濫\n黄色　土砂崩れ",
+        "creationDate": "2026-09-02",
+        "images": [
+          "images/59_1.jpg"
+        ],
+        "status": "approved"
+      }
     }
   ]
 }
