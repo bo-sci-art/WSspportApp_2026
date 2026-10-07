@@ -648,6 +648,30 @@
         ],
         "status": "approved"
       }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.6410826182515,
+          35.52268965634268
+        ]
+      },
+      "properties": {
+        "id": "60",
+        "field_23": null,
+        "field_24": "洪水（外水氾濫）, 高潮",
+        "field_25": "rei",
+        "Message": "rei",
+        "collage": "rei",
+        "Mabling": "rei",
+        "creationDate": "2026-10-07",
+        "images": [
+          "images/60_1.jpg"
+        ],
+        "status": "approved"
+      }
     }
   ]
 }
