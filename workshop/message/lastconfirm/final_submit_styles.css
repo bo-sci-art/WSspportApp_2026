@@ -889,3 +889,31 @@ body {
     padding: 2rem 1rem;
     line-height: 1.6;
 }
+
+/* =====================================
+   最終確認画面での修正（インライン編集）
+   ===================================== */
+.summary-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.5rem}
+.summary-head .summary-label{margin-bottom:0}
+.edit-btn{flex:none;background:#fff;color:var(--color-primary);border:1.5px solid var(--color-primary);border-radius:999px;
+  padding:.3rem .8rem;font-size:.82rem;font-weight:600;cursor:pointer}
+.edit-btn:hover{background:var(--color-primary);color:#fff}
+.edit-btn[disabled]{opacity:.4;cursor:default}
+.summary-card.editing{border-left-color:var(--color-warning);background:#fffdf5}
+.summary-editor{margin:.25rem 0 .75rem}
+.summary-editor textarea,.summary-editor input[type=text]{width:100%;box-sizing:border-box;padding:.6rem .7rem;font-size:.95rem;
+  border:1.5px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;line-height:1.6}
+.summary-editor textarea{min-height:110px;resize:vertical}
+.summary-editor textarea:focus,.summary-editor input[type=text]:focus{outline:none;border-color:var(--color-primary)}
+.editor-hazards{display:flex;flex-direction:column;gap:.35rem}
+.editor-hazards label{display:flex;align-items:center;gap:.5rem;font-size:.92rem;cursor:pointer;padding:.25rem 0}
+.editor-hazards input{width:18px;height:18px;accent-color:var(--color-primary)}
+.editor-hint{font-size:.82rem;color:var(--color-text-secondary);margin:.25rem 0 .5rem;line-height:1.5}
+.editor-error{font-size:.82rem;color:var(--color-danger);margin-top:.35rem;display:none}
+.editor-actions{display:flex;gap:.5rem;justify-content:flex-end;margin-top:.6rem}
+.editor-actions .btn{padding:.5rem 1.1rem;font-size:.88rem}
+.summary-saved{font-size:.8rem;color:var(--color-success);margin-top:.35rem}
+
+/* 注意カード内のボタン（「コラージュのページへ」など）は文章にそろえて左寄せ・余白を詰める */
+.alert-content .action-section{justify-content:flex-start;margin:.75rem 0 0 !important}
+.alert-content .action-section .btn{padding:.55rem 1.2rem;font-size:.88rem}

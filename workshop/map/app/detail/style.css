@@ -73,3 +73,9 @@ body{display:flex;height:100%;overflow:hidden;background:var(--base-color);color
 .res-desc{display:block;color:#667}
 .res-note{font-size:.76em;color:#6a5a1e;background:#fff8e6;border:1px solid #f0e2b8;border-radius:6px;padding:6px 8px;line-height:1.5}
 .res-source{font-size:.66em;color:#aaa;line-height:1.4}
+
+/* 浸水深の目安ピクトグラム（凡例の右） */
+.lg-shinsui{display:flex;gap:6px;align-items:flex-start}
+.lg-shinsui img{flex:0 1 auto;min-width:0}
+.depth-guide{flex:none}
+.lg-guide-note{font-size:.66em;color:#888;margin-top:4px;line-height:1.5}

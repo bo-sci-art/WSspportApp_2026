@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>ハザードマップ（対象区域の選定）</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./style.css?v=20261007">
 </head>
 <body>
 
@@ -36,17 +36,16 @@
       <div class="hg-head">地盤</div>
       <div class="hg-body">
         <div class="fopt"><input type="checkbox" id="chk-kyukei"><label for="chk-kyukei">土砂災害（急傾斜地の崩壊）</label><button class="info-btn" data-k="kyukei">?</button></div>
-        <div class="fopt"><input type="checkbox" id="chk-swale"><label for="chk-swale">液状化に関わる低地</label><button class="info-btn" data-k="swale">?</button></div>
       </div>
     </div>
 
     <!-- 地震 -->
     <div class="hazard-group hg-jishin" data-cat="jishin">
-      <div class="hg-head">地震</div>
+      <div class="hg-head">地震・液状化・焼失棟数</div>
       <div class="hg-body">
-        <a class="ext-link" href="https://wwwm.city.yokohama.lg.jp/yokohama/Agreement?IsPost=False&MapId=65&RequestPage=%2fyokohama%2fPositionSelect%3fmid%3d65" target="_blank" rel="noopener">
+        <a class="ext-link" href="https://wwwm.city.yokohama.lg.jp/yokohama/Map?mid=62&mpx=139.62630111702703&mpy=35.536158445033394&mps=10000&mtp=dm&gprj=3" target="_blank" rel="noopener">
           🔗 わいわい防災マップ（横浜市）で見る
-          <small>震度・地震火災（延焼）などは横浜市の防災マップへ（外部サイト）</small>
+          <small>南海トラフ巨大地震の震度・液状化・焼失棟数（地震火災）は、横浜市の防災マップで確認できます（外部サイト）</small>
         </a>
       </div>
     </div>
@@ -76,6 +75,6 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="./script.js"></script>
+<script src="./script.js?v=20261007"></script>
 </body>
 </html>

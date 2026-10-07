@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FINAL STEP | 最終確認・提出</title>
-    <link rel="stylesheet" href="./final_submit_styles.css?v=2.0.0">
+    <link rel="stylesheet" href="./final_submit_styles.css?v=2.1.1">
     <!-- Leaflet (map preview) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -13,39 +13,12 @@
     <!-- Main Container -->
     <div class="container">
         
-        <!-- Progress Navigation Tabs -->
-        <nav class="progress-tabs">
-            <button class="tab-item" data-page="hazard" onclick="navigateToPage('hazard')">
-                <span class="tab-number">1</span>
-                <span class="tab-label">対象地点/<br>ハザード</span>
-                <span class="tab-badge warning" id="badge-hazard" style="display:none;">⚠</span>
-            </button>
-            <button class="tab-item" data-page="marbling" onclick="navigateToPage('marbling')">
-                <span class="tab-number">2</span>
-                <span class="tab-label">マーブリング</span>
-                <span class="tab-badge warning" id="badge-marbling" style="display:none;">⚠</span>
-            </button>
-            <button class="tab-item" data-page="collage" onclick="navigateToPage('collage')">
-                <span class="tab-number">3</span>
-                <span class="tab-label">コラージュ</span>
-                <span class="tab-badge warning" id="badge-collage" style="display:none;">⚠</span>
-            </button>
-            <button class="tab-item" data-page="artwork" onclick="navigateToPage('artwork')">
-                <span class="tab-number">4</span>
-                <span class="tab-label">作品情報</span>
-                <span class="tab-badge warning" id="badge-artwork" style="display:none;">⚠</span>
-            </button>
-            <button class="tab-item active" data-page="final">
-                <span class="tab-number">5</span>
-                <span class="tab-label">最終確認</span>
-            </button>
-        </nav>
 
         <!-- Header Section -->
         <header class="final-header">
             <div class="step-badge">FINAL STEP</div>
             <h1 class="main-title">最終確認・提出</h1>
-            <p class="subtitle">入力した内容を確認し、防災行動マップに登録します</p>
+            <p class="subtitle">入力した内容を確認し、防災行動マップに登録します<br>直したいところは各項目の「✏️ 修正する」から、この画面で修正できます</p>
         </header>
 
         <!-- Step 1: Data Summary -->
@@ -68,33 +41,39 @@
 
             <div class="summary-grid">
                 <div class="summary-card">
-                    <h3 class="summary-label">🗺️ 対象地点</h3>
+                    <div class="summary-head"><h3 class="summary-label">🗺️ 対象地点</h3><button type="button" class="edit-btn" data-edit="location">✏️ 修正する</button></div>
+                    <div class="summary-editor" id="editor-location" style="display:none;"></div>
                     <div id="summary-location" class="summary-value">読込中...</div>
                     <div id="summary-map" class="summary-map"></div>
                 </div>
                 
                 <div class="summary-card">
-                    <h3 class="summary-label">⚠️ 選択したハザードマップ</h3>
+                    <div class="summary-head"><h3 class="summary-label">⚠️ 選択したハザードマップ</h3><button type="button" class="edit-btn" data-edit="hazards">✏️ 修正する</button></div>
+                    <div class="summary-editor" id="editor-hazards" style="display:none;"></div>
                     <div id="summary-hazards" class="summary-value">読込中...</div>
                 </div>
                 
                 <div class="summary-card">
-                    <h3 class="summary-label">🎨 マーブリング作品の意図</h3>
+                    <div class="summary-head"><h3 class="summary-label">🎨 マーブリング作品の意図</h3><button type="button" class="edit-btn" data-edit="marbling">✏️ 修正する</button></div>
+                    <div class="summary-editor" id="editor-marbling" style="display:none;"></div>
                     <div id="summary-marbling" class="summary-value">読込中...</div>
                 </div>
                 
                 <div class="summary-card">
-                    <h3 class="summary-label">✂️ コラージュ作品の意図</h3>
+                    <div class="summary-head"><h3 class="summary-label">✂️ コラージュ作品の意図</h3><button type="button" class="edit-btn" data-edit="collage">✏️ 修正する</button></div>
+                    <div class="summary-editor" id="editor-collage" style="display:none;"></div>
                     <div id="summary-collage" class="summary-value">読込中...</div>
                 </div>
                 
                 <div class="summary-card">
-                    <h3 class="summary-label">💬 作品タイトル</h3>
+                    <div class="summary-head"><h3 class="summary-label">💬 作品タイトル</h3><button type="button" class="edit-btn" data-edit="title">✏️ 修正する</button></div>
+                    <div class="summary-editor" id="editor-title" style="display:none;"></div>
                     <div id="summary-title" class="summary-value">読込中...</div>
                 </div>
                 
                 <div class="summary-card">
-                    <h3 class="summary-label">✍️ 制作者名（ペンネーム）</h3>
+                    <div class="summary-head"><h3 class="summary-label">✍️ 制作者名（ペンネーム）</h3><button type="button" class="edit-btn" data-edit="creator">✏️ 修正する</button></div>
+                    <div class="summary-editor" id="editor-creator" style="display:none;"></div>
                     <div id="summary-creator" class="summary-value">読込中...</div>
                 </div>
             </div>
@@ -162,6 +141,6 @@
     </div>
 
     <!-- Scripts -->
-    <script src="./final_submit_script.js?v=3.0.0"></script>
+    <script src="./final_submit_script.js?v=3.1.0"></script>
 </body>
 </html>

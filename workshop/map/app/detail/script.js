@@ -36,12 +36,6 @@ const hazards = {
     name: "土砂災害（急傾斜地の崩壊）",
     desc: "傾斜度30度以上・高さ5m以上の急な斜面（がけ）が、大雨や地震などで崩れ落ちる“がけ崩れ”の危険がある区域です。黄色＝土砂災害警戒区域（生命・身体に危害のおそれ）、赤＝土砂災害特別警戒区域（建物の損壊など著しい危害のおそれ／より危険）。",
     legend: "dosha"
-  },
-  swale: {
-    layer: L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/swale/{z}/{x}/{y}.png", {maxZoom:17, maxNativeZoom:16, opacity:.65, attribution:"地理院タイル（明治期の低湿地）"}),
-    name: "液状化に関わる低地（明治期の低湿地）",
-    desc: "明治時代に、川沿いの湿地・水田・旧河道・砂礫地などだった土地を色分けした地図です。こうした低湿地は、現在の液状化等との関連性が深いとされます。地図上の色は「土地の種類」を表し、種類ごとに色が違います（黄色などもそのひとつ）。※正式な液状化予測ではなく、古い地図をもとにした参考データで、位置に最大100m程度の誤差があります。",
-    legend: "swale"
   }
 };
 
@@ -83,11 +77,52 @@ document.querySelectorAll(".info-btn").forEach(b => {
   };
 });
 
+/* ===== 浸水深の目安ピクトグラム（凡例の右に表示） =====
+   数値はここで調整できます（単位 m） */
+const DEPTH_GUIDE = { maxM: 8, adultM: 1.7, childM: 1.2, eaveM: 5.0, houseM: 7.0 };
+function depthGuideSVG(){
+  const g = DEPTH_GUIDE, W = 116, H = 210, top = 22, bottom = 14;
+  const ground = H - bottom, ppm = (ground - top) / g.maxM, y = m => ground - m * ppm;
+  // 凡例と同じ色（国土地理院 浸水深の新凡例）
+  const bands = [[0,.3,"#FFFFB3"],[.3,.5,"#F7F5A9"],[.5,1,"#F8E1A6"],[1,3,"#FFD8C0"],[3,5,"#FFB7B7"],[5,g.maxM,"#FF9191"]];
+  const ink = "#4A4A4A";
+  let s = '<svg class="depth-guide" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="浸水深の目安（人と家の高さ）" font-family="sans-serif">';
+  bands.forEach(b => { s += '<rect x="22" y="'+y(b[1])+'" width="'+(W-22)+'" height="'+(y(b[0])-y(b[1]))+'" fill="'+b[2]+'"/>'; });
+  // 目盛り（表の区切りと同じ値）
+  [[.5,"0.5m"],[3,"3m"],[5,"5m"]].forEach(t => {
+    s += '<line x1="20" x2="'+W+'" y1="'+y(t[0])+'" y2="'+y(t[0])+'" stroke="#999" stroke-width=".6" stroke-dasharray="2 2"/>';
+    s += '<text x="19" y="'+(y(t[0])+3)+'" font-size="8" text-anchor="end" fill="#666">'+t[1]+'</text>';
+  });
+  s += '<text x="19" y="'+(ground+3)+'" font-size="8" text-anchor="end" fill="#666">0m</text>';
+  s += '<text x="'+((22+W)/2)+'" y="10" font-size="8" text-anchor="middle" fill="#666">▲10m以上は</text>';
+  s += '<text x="'+((22+W)/2)+'" y="19" font-size="8" text-anchor="middle" fill="#666">屋根より上</text>';
+  // 人（大人・子ども）
+  const person = (cx, hM) => {
+    const h = hM * ppm, r = h * .11, hy = ground - h + r, bt = hy + r + 1, w = h * .30, legTop = ground - h * .45;
+    return '<circle cx="'+cx+'" cy="'+hy+'" r="'+r+'" fill="'+ink+'"/>'
+      + '<rect x="'+(cx-w/2)+'" y="'+bt+'" width="'+w+'" height="'+(legTop-bt)+'" rx="'+(w*.3)+'" fill="'+ink+'"/>'
+      + '<rect x="'+(cx-w/2)+'" y="'+(legTop-1)+'" width="'+(w*.44)+'" height="'+(ground-legTop+1)+'" fill="'+ink+'"/>'
+      + '<rect x="'+(cx+w*.06)+'" y="'+(legTop-1)+'" width="'+(w*.44)+'" height="'+(ground-legTop+1)+'" fill="'+ink+'"/>';
+  };
+  s += person(30, g.adultM) + person(41, g.childM);
+  // 家（2階建て：軒の高さ・屋根の高さ）
+  const hx1 = 52, hx2 = W - 4, ey = y(g.eaveM), ry = y(g.houseM), fy = y(2.6);
+  s += '<polygon points="'+(hx1-3)+','+ey+' '+((hx1+hx2)/2)+','+ry+' '+(hx2+3)+','+ey+'" fill="'+ink+'"/>';
+  s += '<rect x="'+hx1+'" y="'+ey+'" width="'+(hx2-hx1)+'" height="'+(ground-ey)+'" fill="none" stroke="'+ink+'" stroke-width="2"/>';
+  s += '<line x1="'+hx1+'" x2="'+hx2+'" y1="'+fy+'" y2="'+fy+'" stroke="'+ink+'" stroke-width="1.2"/>';
+  const win = (x, m1, m2) => '<rect x="'+x+'" y="'+y(m2)+'" width="13" height="'+(y(m1)-y(m2))+'" fill="#fff" stroke="'+ink+'" stroke-width="1"/>';
+  s += win(hx1+7, 3.4, 4.4) + win(hx2-20, 3.4, 4.4) + win(hx2-20, .9, 2.0);
+  s += '<rect x="'+(hx1+7)+'" y="'+y(2.0)+'" width="11" height="'+(ground-y(2.0))+'" fill="#fff" stroke="'+ink+'" stroke-width="1"/>';
+  s += '<line x1="20" x2="'+W+'" y1="'+ground+'" y2="'+ground+'" stroke="'+ink+'" stroke-width="1.2"/>';
+  s += '</svg>';
+  return s;
+}
+
 /* ===== 凡例・説明 ===== */
 const LEGEND_GRAPHIC = {
-  shinsui: '<img src="https://disaportal.gsi.go.jp/hazardmap/copyright/img/shinsui_legend3.png" alt="浸水深凡例" onerror="this.replaceWith(document.createTextNode(\'（公式凡例画像を読み込めませんでした）\'))">',
-  dosha: '<div class="lg-css-row"><span class="lg-swatch" style="background:#ffe600"></span>警戒区域（イエロー）</div><div class="lg-css-row"><span class="lg-swatch" style="background:#ff5a3c"></span>特別警戒区域（レッド）</div>',
-  swale: '<div class="lg-desc" style="margin-bottom:6px">色分け＝明治期の土地の種類（砂礫地・湿地・水田・旧河道 など）。低湿地ほど、現在の液状化等との関連性が深いとされます。色ごとの意味は下の公式凡例で確認できます。</div><a href="https://cyberjapandata.gsi.go.jp/legend/lw_legend.pdf" target="_blank" rel="noopener" style="font-size:.74em;color:var(--sub-color);font-weight:bold">▶ 国土地理院の公式凡例（色の一覧）を見る</a>'
+  shinsui: '<div style="display:grid;grid-template-columns:minmax(0,1fr) 116px;gap:6px;align-items:start"><img style="width:100%;height:auto;max-width:none;display:block" src="https://disaportal.gsi.go.jp/hazardmap/copyright/img/shinsui_legend3.png" alt="浸水深凡例" onerror="this.replaceWith(document.createTextNode(\'（公式凡例画像を読み込めませんでした）\'))">' + depthGuideSVG() + '</div>'
+         + '<div class="lg-guide-note">右の図は高さの目安です（大人' + DEPTH_GUIDE.adultM + 'm・子ども' + DEPTH_GUIDE.childM + 'm・2階建ての家 約' + DEPTH_GUIDE.houseM + 'm）</div>',
+  dosha: '<div class="lg-css-row"><span class="lg-swatch" style="background:#ffe600"></span>警戒区域（イエロー）</div><div class="lg-css-row"><span class="lg-swatch" style="background:#ff5a3c"></span>特別警戒区域（レッド）</div>'
 };
 function refreshLegend(){
   const box = document.getElementById("legend-box");

@@ -72,6 +72,7 @@ document.addEventListener('DOMContentLoaded', function() {
     checkArtworkImage();
     displayArtworkPreview();
     checkPendingSubmission();
+    initInlineEditing();
 
     console.log('Final Submit Page - Ready');
 });
@@ -543,3 +544,198 @@ function logAppData() {
 
 // Expose to global for debugging
 window.logAppData = logAppData;
+
+
+// =====================================
+// 最終確認画面での修正（インライン編集）
+// 各項目の「✏️ 修正する」から、この画面のまま修正・保存できる
+// 保存先は各セクションと同じ localStorage のキー（各ページに戻っても同じ内容が表示される）
+// =====================================
+const EDIT_CONFIG = {
+    // ※ map/Log/log_hazard_map_script.js の hazardOptions と同じ並びにしてください
+    HAZARD_OPTIONS: [
+        '洪水（外水氾濫）',
+        '内水氾濫',
+        '高潮',
+        '津波',
+        '土砂災害（急傾斜地の崩壊）',
+        '液状化に関わる低地（参考）',
+        '地震の揺れ（震度）',
+        '地震火災（延焼）'
+    ],
+    DEFAULT_CENTER: [35.5314, 139.6321]   // 綱島駅周辺（ハザードマップページと同じ）
+};
+
+let editingKey = null;
+let editTempLatLng = null;
+
+function escapeHTML(str) {
+    return String(str ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+
+function readJSON(key) {
+    try { return JSON.parse(localStorage.getItem(key)) || {}; } catch (e) { return {}; }
+}
+
+function initInlineEditing() {
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', () => openEditor(btn.dataset.edit));
+    });
+}
+
+function setEditingUI(key) {
+    editingKey = key;
+    document.querySelectorAll('.edit-btn').forEach(b => { b.disabled = !!key; });
+    document.querySelectorAll('.summary-card').forEach(c => c.classList.remove('editing'));
+    const submitBtn = document.getElementById('btn-submit-artwork');
+    if (key) {
+        const card = document.getElementById('editor-' + key).closest('.summary-card');
+        if (card) card.classList.add('editing');
+        if (submitBtn) submitBtn.disabled = true;   // 編集中は登録できないようにする
+    } else {
+        checkArtworkImage();                         // 画像の有無に応じて登録ボタンを戻す
+    }
+}
+
+function openEditor(key) {
+    if (editingKey) return;
+    const box = document.getElementById('editor-' + key);
+    if (!box) return;
+
+    let body = '';
+    if (key === 'hazards') {
+        const selected = appData.hazardMap.hazards || [];
+        const options = EDIT_CONFIG.HAZARD_OPTIONS.slice();
+        selected.forEach(h => { if (!options.includes(h)) options.push(h); });
+        body = '<p class="editor-hint">参考にしたハザードマップをすべて選んでください（1つ以上）</p>'
+             + '<div class="editor-hazards">'
+             + options.map((h, i) => '<label><input type="checkbox" value="' + escapeHTML(h) + '"' + (selected.includes(h) ? ' checked' : '') + '>' + escapeHTML(h) + '</label>').join('')
+             + '</div>';
+    } else if (key === 'location') {
+        body = '<p class="editor-hint">下の地図をタップすると、その場所に地点を選び直せます</p>';
+    } else if (key === 'marbling' || key === 'collage') {
+        const v = key === 'marbling' ? appData.marbling.description : appData.collage.description;
+        body = '<textarea>' + escapeHTML(v) + '</textarea>';
+    } else if (key === 'title' || key === 'creator') {
+        const v = key === 'title' ? appData.artwork.title : appData.artwork.creatorName;
+        body = '<input type="text" value="' + escapeHTML(v) + '">';
+    }
+    box.innerHTML = body
+        + '<div class="editor-error"></div>'
+        + '<div class="editor-actions">'
+        + '<button type="button" class="btn btn-secondary" data-act="cancel">キャンセル</button>'
+        + '<button type="button" class="btn btn-primary" data-act="save">保存する</button>'
+        + '</div>';
+    box.style.display = 'block';
+    box.querySelector('[data-act="cancel"]').addEventListener('click', () => closeEditor(key, false));
+    box.querySelector('[data-act="save"]').addEventListener('click', () => saveEditor(key));
+
+    // 表示中の値は隠して、編集欄だけを見せる（地点は地図を使うので表示したまま）
+    if (key !== 'location') {
+        const valueEl = document.getElementById(key === 'creator' ? 'summary-creator' : 'summary-' + key);
+        if (valueEl) valueEl.style.display = 'none';
+    } else {
+        startLocationEdit();
+    }
+    setEditingUI(key);
+    const field = box.querySelector('textarea, input[type=text]');
+    if (field) field.focus();
+}
+
+function closeEditor(key, saved) {
+    const box = document.getElementById('editor-' + key);
+    if (box) { box.innerHTML = ''; box.style.display = 'none'; }
+    const valueEl = document.getElementById(key === 'creator' ? 'summary-creator' : 'summary-' + key);
+    if (valueEl) valueEl.style.display = '';
+    if (key === 'location') stopLocationEdit();
+    setEditingUI(null);
+
+    displayDataSummary();
+    checkMissingData();
+
+    if (saved && valueEl) {
+        const note = document.createElement('div');
+        note.className = 'summary-saved';
+        note.textContent = '✓ 保存しました';
+        valueEl.insertAdjacentElement('afterend', note);
+        setTimeout(() => note.remove(), 2500);
+    }
+}
+
+function showEditorError(key, msg) {
+    const el = document.querySelector('#editor-' + key + ' .editor-error');
+    if (el) { el.textContent = msg; el.style.display = 'block'; }
+}
+
+function saveEditor(key) {
+    const box = document.getElementById('editor-' + key);
+
+    if (key === 'hazards') {
+        const values = Array.from(box.querySelectorAll('input[type=checkbox]:checked')).map(c => c.value);
+        if (values.length === 0) return showEditorError(key, 'ハザードマップを1つ以上選んでください');
+        appData.hazardMap.hazards = values;
+        saveHazardMapLog();
+    } else if (key === 'location') {
+        if (!editTempLatLng) return showEditorError(key, '地図をタップして地点を選んでください');
+        appData.hazardMap.location = Object.assign({}, appData.hazardMap.location || {}, { lat: editTempLatLng.lat, lon: editTempLatLng.lng });
+        saveHazardMapLog();
+    } else if (key === 'marbling' || key === 'collage') {
+        const v = box.querySelector('textarea').value.trim();
+        if (!v) return showEditorError(key, '作品の説明を入力してください');
+        appData[key].description = v;
+        const storageKey = key === 'marbling' ? 'marblingLog' : 'collageLog';
+        const raw = readJSON(storageKey);
+        raw[key] = Object.assign({}, raw[key] || {}, { description: v });
+        localStorage.setItem(storageKey, JSON.stringify(raw));
+    } else if (key === 'title' || key === 'creator') {
+        const v = box.querySelector('input[type=text]').value.trim();
+        if (!v) return showEditorError(key, key === 'title' ? '作品タイトルを入力してください' : '制作者名（ペンネーム）を入力してください');
+        if (key === 'title') appData.artwork.title = v; else appData.artwork.creatorName = v;
+        const raw = readJSON('artworkSubmit');
+        if (key === 'title') raw.title = v; else raw.creatorName = v;
+        localStorage.setItem('artworkSubmit', JSON.stringify(raw));
+    }
+    closeEditor(key, true);
+}
+
+// ハザードマップページと同じ形（{ hazards, location }）で保存する
+function saveHazardMapLog() {
+    const raw = readJSON('hazardMapLog');
+    const target = raw.hazardMap ? raw.hazardMap : raw;
+    target.hazards = appData.hazardMap.hazards || [];
+    target.location = appData.hazardMap.location || { lat: null, lon: null };
+    localStorage.setItem('hazardMapLog', JSON.stringify(raw));
+}
+
+// ---- 地点の選び直し（確認用の地図をそのまま使う） ----
+function startLocationEdit() {
+    const loc = appData.hazardMap.location || {};
+    if (!previewMap) {
+        const c = (loc.lat && loc.lon) ? [loc.lat, loc.lon] : EDIT_CONFIG.DEFAULT_CENTER;
+        renderSummaryMap(c[0], c[1]);
+        if (!(loc.lat && loc.lon) && previewMarker) { previewMarker.remove(); previewMarker = null; }
+    }
+    editTempLatLng = null;
+    if (!previewMap) return;
+    previewMap.getContainer().style.cursor = 'crosshair';
+    previewMap.on('click', onEditMapClick);
+}
+
+function onEditMapClick(e) {
+    editTempLatLng = e.latlng;
+    if (previewMarker) previewMarker.setLatLng(e.latlng);
+    else previewMarker = L.marker(e.latlng).addTo(previewMap);
+    const err = document.querySelector('#editor-location .editor-error');
+    if (err) err.style.display = 'none';
+    const locationEl = document.getElementById('summary-location');
+    if (locationEl) locationEl.textContent = '新しい地点: 緯度 ' + e.latlng.lat.toFixed(6) + ', 経度 ' + e.latlng.lng.toFixed(6) + '（まだ保存されていません）';
+}
+
+function stopLocationEdit() {
+    if (!previewMap) return;
+    previewMap.off('click', onEditMapClick);
+    previewMap.getContainer().style.cursor = '';
+    editTempLatLng = null;
+    const loc = appData.hazardMap.location || {};
+    if (!(loc.lat && loc.lon) && previewMarker) { previewMarker.remove(); previewMarker = null; }
+}
