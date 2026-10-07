@@ -630,102 +630,6 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          139.63653390115627,
-          35.52758359398654
-        ]
-      },
-      "properties": {
-        "id": "55",
-        "field_23": null,
-        "field_24": "内水氾濫",
-        "field_25": "Test",
-        "Message": "Test",
-        "collage": "Test",
-        "Mabling": "Test",
-        "creationDate": "2026-08-31",
-        "images": [
-          "images/55_1.jpg"
-        ],
-        "status": "approved"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          139.6415105878981,
-          35.52588496782512
-        ]
-      },
-      "properties": {
-        "id": "56",
-        "field_23": null,
-        "field_24": "洪水（外水氾濫）",
-        "field_25": "I",
-        "Message": "I",
-        "collage": "I",
-        "Mabling": "7",
-        "creationDate": "2026-08-31",
-        "images": [
-          "images/56_1.jpg"
-        ],
-        "status": "approved"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          139.64172363281253,
-          35.54273861183838
-        ]
-      },
-      "properties": {
-        "id": "57",
-        "field_23": null,
-        "field_24": "地震の揺れ（震度）, 液状化に関わる低地（参考）",
-        "field_25": "ペンネーム",
-        "Message": "作品タイトル（メッセージ）",
-        "collage": "・どんな行動や備えを表現しましたか？\n\n・その行動をしてほしいのは、誰ですか？\n（住民／通勤・通学者／買い物客／旅行者 など）",
-        "Mabling": "・模様は、どんなことをイメージしていますか？\n\n・色は、何を表していますか？",
-        "creationDate": "2026-09-02",
-        "images": [
-          "images/57_1.jpg"
-        ],
-        "status": "approved"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          139.64781761169436,
-          35.53845629890696
-        ]
-      },
-      "properties": {
-        "id": "58",
-        "field_23": null,
-        "field_24": "土砂災害（急傾斜地の崩壊）, 津波",
-        "field_25": "ペンネーム",
-        "Message": "タイトル",
-        "collage": "防災行動",
-        "Mabling": "表現した災害リスクについて",
-        "creationDate": "2026-09-02",
-        "images": [
-          "images/58_1.jpg"
-        ],
-        "status": "approved"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
           139.5666075745032,
           35.51691686781335
         ]
@@ -741,30 +645,6 @@
         "creationDate": "2026-09-02",
         "images": [
           "images/59_1.jpg"
-        ],
-        "status": "approved"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          139.63121456332735,
-          35.53055451600829
-        ]
-      },
-      "properties": {
-        "id": "60",
-        "field_23": null,
-        "field_24": "洪水（外水氾濫）",
-        "field_25": "例",
-        "Message": "例",
-        "collage": "例",
-        "Mabling": "例",
-        "creationDate": "2026-10-07",
-        "images": [
-          "images/60_1.jpg"
         ],
         "status": "approved"
       }
