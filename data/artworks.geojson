@@ -672,6 +672,30 @@
         ],
         "status": "approved"
       }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.64330712031133,
+          35.54423482800304
+        ]
+      },
+      "properties": {
+        "id": "61",
+        "field_23": null,
+        "field_24": "液状化に関わる低地（参考）",
+        "field_25": "あああああああああああ",
+        "Message": "あああああああああ",
+        "collage": "ああああああ",
+        "Mabling": "ああああああああああ",
+        "creationDate": "2026-10-11",
+        "images": [
+          "images/61_1.jpg"
+        ],
+        "status": "approved"
+      }
     }
   ]
 }
