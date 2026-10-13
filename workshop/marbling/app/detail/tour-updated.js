@@ -306,7 +306,7 @@ class Tour {
     this.pop.style.bottom = ""; // 下固定を解除
     
     // 表示クラスを追加（アニメーション用）
-    this.pop.style.display = "block";
+    this.pop.style.display = "flex";   // 縦方向レイアウト（tour-styles.css で flex-direction: column）
     // 次のフレームでis-openを追加してアニメーション発火
     requestAnimationFrame(() => {
       this.pop.classList.add("is-open");

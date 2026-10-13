@@ -10,7 +10,7 @@ export const GUIDE = {
           type: "modal",
           content: {
             title: "ようこそ！マーブリングの世界へ！",
-            body: "マーブリング作品制作を体験しましょう。途中でスキップもできます。"
+            body: "右上の「終了」を押すと説明を全部見ないで制作に入れます"
           },
           cta: { primary: "はじめる", secondary: "スキップ" },
           advance: { mode: "click-cta" }
@@ -84,7 +84,7 @@ export const GUIDE = {
           id: "save",
           type: "spotlight",
           target: "#ctrl-save",
-          content: { title: "保存しよう", body: "作品を画像ファイルとして保存します。" },
+          content: { title: "保存しよう", body: "作品を画像ファイルとして保存します。何回でも保存でき、最後に保存した作品がコラージュ制作の背景画になります。" },
           advance: { mode: "event", name: "export:click" }
         },
         {
@@ -93,7 +93,7 @@ export const GUIDE = {
           target: "#help-btn",
           content: {
             title: "完了！",
-            body: "では作品を制作しましょう。左上の「?」からいつでもチュートリアルを開けます。"
+            body: "では作品を制作しましょう。左上の「?」からいつでもこのチュートリアルを開けます。"
           },
           cta: { primary: "閉じる" },
           advance: { mode: "click-cta" }

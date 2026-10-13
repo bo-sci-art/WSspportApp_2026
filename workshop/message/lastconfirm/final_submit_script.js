@@ -8,6 +8,7 @@
  * - Used hazard maps → field_24
  * - Marbling description → Mabling
  * - Collage description → collage
+ * - 防災行動のタイミング（事前／災害時／復旧時） → field_23（カンマ区切り）
  * - Message (artwork title) → Message
  * - Creator name → field_25
  * - Target location → lat / lon
@@ -47,7 +48,8 @@ let appData = {
         description: ''
     },
     collage: {
-        description: ''
+        description: '',
+        phases: []
     },
     artwork: {
         title: '',
@@ -165,6 +167,19 @@ function displayDataSummary() {
         collageEl.classList.add('empty');
     }
 
+    // 防災行動のタイミング
+    const phasesEl = document.getElementById('summary-phases');
+    if (phasesEl) {
+        const ph = appData.collage.phases || [];
+        if (ph.length > 0) {
+            phasesEl.innerHTML = ph.map(x => `<span class="tag">${escapeHTML(x)}</span>`).join(' ');
+            phasesEl.classList.remove('empty');
+        } else {
+            phasesEl.textContent = '（未選択）';
+            phasesEl.classList.add('empty');
+        }
+    }
+
     // Title
     const titleEl = document.getElementById('summary-title');
     if (appData.artwork.title) {
@@ -203,7 +218,7 @@ function checkMissingData() {
         badges.hazard = true;
     }
     if (!appData.hazardMap.location?.lat || !appData.hazardMap.location?.lon) {
-        missing.push('対象地点が選択されていません');
+        missing.push('対象地点／区域が選択されていません');
         badges.hazard = true;
     }
 
@@ -214,6 +229,10 @@ function checkMissingData() {
 
     if (!appData.collage.description || appData.collage.description.trim() === '') {
         missing.push('コラージュ作品の説明が入力されていません');
+        badges.collage = true;
+    }
+    if (!appData.collage.phases || appData.collage.phases.length === 0) {
+        missing.push('防災行動のタイミングが選択されていません');
         badges.collage = true;
     }
 
@@ -284,7 +303,7 @@ function buildSubmitPayload(imageDataURL) {
         lat: loc.lat,
         lon: loc.lon,
         properties: {
-            field_23: null,
+            field_23: (appData.collage.phases || []).join(', ') || null,   // 防災行動のタイミング
             field_24: hazards,
             field_25: appData.artwork.creatorName || '匿名',
             Message: appData.artwork.title || '',
@@ -305,7 +324,7 @@ async function submitArtwork() {
 
     const loc = appData.hazardMap.location;
     if (!loc || !loc.lat || !loc.lon) {
-        alert('対象地点が選択されていません。「対象地点/ハザード」のページからやり直してください。');
+        alert('対象地点／区域が選択されていません。「対象地点／区域・ハザードマップ」のページからやり直してください。');
         return;
     }
 
@@ -470,7 +489,7 @@ function navigateToPage(page) {
 
 function getPageName(page) {
     const names = {
-        hazard: '対象地点/ハザードマップ',
+        hazard: '対象地点／区域・ハザードマップ',
         marbling: 'マーブリング',
         collage: 'コラージュ',
         artwork: '作品情報'
@@ -559,10 +578,11 @@ const EDIT_CONFIG = {
         '高潮',
         '津波',
         '土砂災害（急傾斜地の崩壊）',
-        '液状化に関わる低地（参考）',
+        '液状化危険度',
         '地震の揺れ（震度）',
-        '地震火災（延焼）'
+        '地震火災（焼失棟数）'
     ],
+    PHASE_OPTIONS: ['事前', '災害時', '復旧時'],   // ※ collage/Log/log_collage.html の選択肢と同じにしてください
     DEFAULT_CENTER: [35.5314, 139.6321]   // 綱島駅周辺（ハザードマップページと同じ）
 };
 
@@ -612,10 +632,16 @@ function openEditor(key) {
              + options.map((h, i) => '<label><input type="checkbox" value="' + escapeHTML(h) + '"' + (selected.includes(h) ? ' checked' : '') + '>' + escapeHTML(h) + '</label>').join('')
              + '</div>';
     } else if (key === 'location') {
-        body = '<p class="editor-hint">下の地図をタップすると、その場所に地点を選び直せます</p>';
+        body = '<p class="editor-hint">下の地図をタップすると、その場所に地点／区域を選び直せます</p>';
     } else if (key === 'marbling' || key === 'collage') {
         const v = key === 'marbling' ? appData.marbling.description : appData.collage.description;
         body = '<textarea>' + escapeHTML(v) + '</textarea>';
+    } else if (key === 'phases') {
+        const selected = appData.collage.phases || [];
+        body = '<p class="editor-hint">当てはまるものをすべて選んでください（1つ以上）</p>'
+             + '<div class="editor-hazards">'
+             + EDIT_CONFIG.PHASE_OPTIONS.map(h => '<label><input type="checkbox" value="' + h + '"' + (selected.includes(h) ? ' checked' : '') + '>' + h + '</label>').join('')
+             + '</div>';
     } else if (key === 'title' || key === 'creator') {
         const v = key === 'title' ? appData.artwork.title : appData.artwork.creatorName;
         body = '<input type="text" value="' + escapeHTML(v) + '">';
@@ -676,7 +702,7 @@ function saveEditor(key) {
         appData.hazardMap.hazards = values;
         saveHazardMapLog();
     } else if (key === 'location') {
-        if (!editTempLatLng) return showEditorError(key, '地図をタップして地点を選んでください');
+        if (!editTempLatLng) return showEditorError(key, '地図をタップして地点／区域を選んでください');
         appData.hazardMap.location = Object.assign({}, appData.hazardMap.location || {}, { lat: editTempLatLng.lat, lon: editTempLatLng.lng });
         saveHazardMapLog();
     } else if (key === 'marbling' || key === 'collage') {
@@ -687,6 +713,13 @@ function saveEditor(key) {
         const raw = readJSON(storageKey);
         raw[key] = Object.assign({}, raw[key] || {}, { description: v });
         localStorage.setItem(storageKey, JSON.stringify(raw));
+    } else if (key === 'phases') {
+        const values = Array.from(box.querySelectorAll('input[type=checkbox]:checked')).map(c => c.value);
+        if (values.length === 0) return showEditorError(key, '1つ以上選んでください');
+        appData.collage.phases = values;
+        const raw = readJSON('collageLog');
+        raw.collage = Object.assign({}, raw.collage || {}, { phases: values });
+        localStorage.setItem('collageLog', JSON.stringify(raw));
     } else if (key === 'title' || key === 'creator') {
         const v = box.querySelector('input[type=text]').value.trim();
         if (!v) return showEditorError(key, key === 'title' ? '作品タイトルを入力してください' : '制作者名（ペンネーム）を入力してください');
@@ -728,7 +761,7 @@ function onEditMapClick(e) {
     const err = document.querySelector('#editor-location .editor-error');
     if (err) err.style.display = 'none';
     const locationEl = document.getElementById('summary-location');
-    if (locationEl) locationEl.textContent = '新しい地点: 緯度 ' + e.latlng.lat.toFixed(6) + ', 経度 ' + e.latlng.lng.toFixed(6) + '（まだ保存されていません）';
+    if (locationEl) locationEl.textContent = '新しい地点／区域: 緯度 ' + e.latlng.lat.toFixed(6) + ', 経度 ' + e.latlng.lng.toFixed(6) + '（まだ保存されていません）';
 }
 
 function stopLocationEdit() {

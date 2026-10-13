@@ -371,3 +371,21 @@
 .tour-popover { box-sizing: border-box; }
 .tour-popover__skip { width: auto; min-width: 34px; height: 28px; padding: 0 10px; white-space: nowrap; }
 .tour-popover__title { padding-right: 56px; }
+
+/* ===== 幅の修正（2026/10）：style.css の max-width:360px が残っていてタイトルが改行されていたため解除 ===== */
+.tour-popover {
+  max-width: none;
+  width: min(560px, calc(100vw - 32px));
+  /* 縦の比率（2026/10）：横長すぎたので高さを確保し、ボタンを下端に揃える */
+  min-height: min(320px, calc(100vh - 48px));
+  flex-direction: column;
+  padding: 36px 40px 28px;
+}
+.tour-popover__title { font-size: 22px; margin-bottom: 16px; }
+.tour-popover__body  { font-size: 16px; line-height: 1.8; flex: 1 1 auto; }
+.tour-popover__actions { margin-top: auto; }
+@media (max-width: 640px) {
+  .tour-popover { min-height: 0; padding: 26px 22px 20px; }
+  .tour-popover__title { font-size: 18px; }
+  .tour-popover__body  { font-size: 14.5px; }
+}

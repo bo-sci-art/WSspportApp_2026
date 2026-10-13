@@ -33,8 +33,7 @@ document.addEventListener("DOMContentLoaded", function () {
     "洪水":  { name:"洪水（外水氾濫）", key:"flood_l2" },
     "高潮":  { name:"高潮", key:"hightide" },
     "津波":  { name:"津波", key:"tsunami" },
-    "土砂":  { name:"土砂災害（急傾斜地の崩壊）", key:"kyukei" },
-    "液状化":{ name:"液状化に関わる低地（参考）", key:"swale" }
+    "土砂":  { name:"土砂災害（急傾斜地の崩壊）", key:"kyukei" }
   };
 
   const phaseKeywords = {
@@ -44,13 +43,31 @@ document.addEventListener("DOMContentLoaded", function () {
   };
 
   const CATCOLOR = { mizu:"#2F80C4", jiban:"#B5793A", jishin:"#E0574A", other:"#888888" };
-  function category(f24){
-    const s=f24||"";
-    if (/震度|火災/.test(s)) return "jishin";
-    if (/土砂|液状化/.test(s)) return "jiban";
-    if (/洪水|高潮|津波/.test(s)) return "mizu";
-    return "other";
+  /* 災害種の分類（2026/10 改訂）
+     水害：洪水（外水氾濫）・内水氾濫・高潮
+     地盤：土砂災害（急傾斜地の崩壊）
+     地震：地震の揺れ（震度）・液状化（液状化危険度）・地震火災（焼失棟数）・津波
+     ※ 1作品で複数の災害を選んでいる場合は、該当する分類すべてで絞り込みに出る */
+  const CAT_RULES = [
+    { cat:"mizu",   re:/洪水|内水|高潮/ },
+    { cat:"jiban",  re:/土砂|急傾斜/ },
+    { cat:"jishin", re:/震度|揺れ|液状化|火災|津波/ }
+  ];
+  function categories(f24){
+    const s = f24 || "";
+    const r = CAT_RULES.filter(x => x.re.test(s)).map(x => x.cat);
+    return r.length ? r : ["other"];
   }
+  function category(f24){ return categories(f24)[0]; }   // ピンの色は先頭の分類
+  /* 防災行動のタイミング（2026/10）：登録時の設問（field_23）を優先。未回答の過去作品はキーワードで推定 */
+  const PHASE_LABEL_TO_KEY = { "事前":"prior", "災害時":"during", "復旧時":"recovery" };
+  function phasesOf(p){
+    const f23 = (p.field_23 || "").trim();
+    if (f23) return f23.split(/[,、]\s*/).map(x => PHASE_LABEL_TO_KEY[x.trim()]).filter(Boolean);
+    const t = (p.Message||"") + (p.collage||"") + (p.Mabling||"");
+    return Object.keys(phaseKeywords).filter(k => phaseKeywords[k].some(kw => t.includes(kw)));
+  }
+
   function makeIcon(color, big){
     const w = big?34:26, h = big?46:36;
     const svg='<svg width="'+w+'" height="'+h+'" viewBox="0 0 24 32" xmlns="http://www.w3.org/2000/svg">'
@@ -185,14 +202,14 @@ document.addEventListener("DOMContentLoaded", function () {
         });
       }
     });
-    // 地震・内水系は国土地理院のオープンタイルが無いため外部リンクを案内
-    if (/震度|火災|内水/.test(riskText)){
+    // 震度・液状化・地震火災・内水は国土地理院のオープンタイルが無いため外部リンクを案内
+    if (/震度|液状化|火災|内水/.test(riskText)){
       const note=document.createElement("div");
       note.style.cssText="font-size:.8em;margin-top:6px;line-height:1.5;";
-      note.innerHTML='震度・地震火災・内水は <a href="https://wwwm.city.yokohama.lg.jp/yokohama/yokohama/Content/pages/links/6_bosai/links.html" target="_blank" rel="noopener" style="color:#4f8b80;font-weight:bold">わいわい防災マップ（横浜市）</a> でご確認ください。';
+      note.innerHTML='震度・液状化危険度・地震火災（焼失棟数）・内水氾濫は <a href="https://wwwm.city.yokohama.lg.jp/yokohama/Portal" target="_blank" rel="noopener" style="color:#4f8b80;font-weight:bold">横浜市の「わいわい防災マップ」</a> で確認できます（外部サイト）。';
       container.appendChild(note);
     }
-    if (hit===0 && !/震度|火災|内水/.test(riskText)){
+    if (hit===0 && !/震度|液状化|火災|内水/.test(riskText)){
       container.innerHTML = "<p style='font-size:0.8em; color:#999;'>※特に関連するハザードマップ情報はありません</p>";
     }
   }
@@ -343,20 +360,10 @@ document.addEventListener("DOMContentLoaded", function () {
   };
 
   // ---- 近くの作品（GeoJSONからクライアント側で） ----
-  function riskRegex(cat){ return cat==="jishin"?/震度|火災/ : cat==="jiban"?/土砂|液状化/ : cat==="mizu"?/洪水|高潮|津波/ : /.*/; }
+  function riskRegex(cat){ const r = CAT_RULES.find(x => x.cat === cat); return r ? r.re : /.*/; }
   function getRiskCategory(p){ return category(p.field_24); }
-  function getPhaseCategory(p){
-    const t=(p.Message||"")+(p.collage||"")+(p.Mabling||"");
-    if (phaseKeywords.prior.some(k=>t.includes(k))) return "prior";
-    if (phaseKeywords.during.some(k=>t.includes(k))) return "during";
-    if (phaseKeywords.recovery.some(k=>t.includes(k))) return "recovery";
-    return "other";
-  }
-  function phaseMatch(p, phase){
-    if (!phaseKeywords[phase]) return false;
-    const t=(p.Message||"")+(p.collage||"")+(p.Mabling||"");
-    return phaseKeywords[phase].some(k=>t.includes(k));
-  }
+  function getPhaseCategory(p){ return phasesOf(p)[0] || "other"; }
+  function phaseMatch(p, phase){ return phasesOf(p).includes(phase); }
   function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 
   window.closeNearbyOverlay = function(){ document.getElementById("nearby-overlay").style.display="none"; };

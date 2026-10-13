@@ -558,10 +558,32 @@ async function captureScreenshot () {
   const datauri = captureCanvas.toDataURL("image/png");
   const blob = await (await fetch(datauri)).blob();
 
-  await idbSet(KEY_LATEST_MARBLING, blob);
+  // ブラウザ標準の alert だと「bo-sci-art.github.io の内容」と出るため、画面内のメッセージで通知する
+  try {
+    await idbSet(KEY_LATEST_MARBLING, blob);
+    showToast("マーブリング作品を保存しました。コラージュ制作の背景画になります。");
+  } catch (e) {
+    console.error("保存に失敗", e);
+    showToast("保存できませんでした。もう一度「作品の保存」を押してください。", true);
+  }
+}
 
-  // 必要なら軽い通知だけ（alertが邪魔なら消してOK）
-  alert("下地を一時保存しました。コラージュで自動反映されます。");
+// 画面内メッセージ（トースト）
+function showToast (message, isError) {
+  let el = document.getElementById("save-toast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "save-toast";
+    el.className = "save-toast";
+    el.setAttribute("role", "status");
+    el.setAttribute("aria-live", "polite");
+    document.body.appendChild(el);
+  }
+  el.textContent = message;
+  el.classList.toggle("is-error", !!isError);
+  el.classList.add("is-show");
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => el.classList.remove("is-show"), 3500);
 }
 
 function framebufferToTexture (target) {

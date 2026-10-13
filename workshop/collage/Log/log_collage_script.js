@@ -24,7 +24,8 @@ const CONFIG = {
 // ============================================
 
 const state = {
-    description: ''
+    description: '',
+    phases: []          // 防災行動のタイミング（事前／災害時／復旧時）
 };
 
 // ============================================
@@ -37,7 +38,9 @@ const elements = {
     characterCount: document.getElementById('characterCount'),
     currentCount: document.getElementById('currentCount'),
     backBtn: document.getElementById('backBtn'),
-    nextBtn: document.getElementById('nextBtn')
+    nextBtn: document.getElementById('nextBtn'),
+    phaseOptions: document.getElementById('phaseOptions'),
+    phaseValidation: document.getElementById('phaseValidation')
 };
 
 // ============================================
@@ -73,6 +76,14 @@ function setupEventListeners() {
         elements.descriptionTextarea.addEventListener('blur', handleTextBlur);
     }
     
+    // 防災行動のタイミング
+    if (elements.phaseOptions) {
+        elements.phaseOptions.querySelectorAll('input[type=checkbox]').forEach(cb => {
+            cb.addEventListener('change', handlePhaseChange);
+        });
+        renderPhaseSelection();
+    }
+
     // Navigation buttons
     if (elements.backBtn) {
         elements.backBtn.addEventListener('click', handleBack);
@@ -101,6 +112,22 @@ function handleTextInput(event) {
     autoSave();
 }
 
+function handlePhaseChange() {
+    state.phases = Array.from(elements.phaseOptions.querySelectorAll('input[type=checkbox]:checked')).map(cb => cb.value);
+    renderPhaseSelection();
+    if (state.phases.length > 0) elements.phaseValidation.style.display = 'none';
+    updateNextButtonState();
+    saveData();
+}
+
+function renderPhaseSelection() {
+    elements.phaseOptions.querySelectorAll('.phase-option').forEach(opt => {
+        const cb = opt.querySelector('input');
+        cb.checked = state.phases.includes(cb.value);
+        opt.classList.toggle('selected', cb.checked);
+    });
+}
+
 function handleTextBlur() {
     // Validate on blur
     if (state.description.length === 0) {
@@ -120,18 +147,25 @@ function updateCharacterCount() {
 function validateForm() {
     const description = elements.descriptionTextarea.value.trim();
     
+    let ok = true;
     if (description.length < CONFIG.minLength) {
         elements.descriptionValidation.style.display = 'block';
-        return false;
+        ok = false;
+    } else {
+        elements.descriptionValidation.style.display = 'none';
     }
-    
-    elements.descriptionValidation.style.display = 'none';
-    return true;
+    if (state.phases.length === 0) {
+        elements.phaseValidation.style.display = 'block';
+        ok = false;
+    } else {
+        elements.phaseValidation.style.display = 'none';
+    }
+    return ok;
 }
 
 function updateNextButtonState() {
     const hasDescription = elements.descriptionTextarea.value.trim().length >= CONFIG.minLength;
-    elements.nextBtn.disabled = !hasDescription;
+    elements.nextBtn.disabled = !(hasDescription && state.phases.length > 0);
 }
 
 // ============================================
@@ -141,7 +175,8 @@ function updateNextButtonState() {
 function saveData() {
     const data = {
         collage: {
-            description: elements.descriptionTextarea.value.trim()
+            description: elements.descriptionTextarea.value.trim(),
+            phases: state.phases.slice()
         }
     };
     
@@ -151,7 +186,7 @@ function saveData() {
 
 function autoSave() {
     // Auto-save while typing (debounced by input event naturally)
-    if (state.description.length > 0) {
+    if (state.description.length > 0 || state.phases.length > 0) {
         saveData();
     }
 }
@@ -169,6 +204,9 @@ function loadSavedData() {
                 elements.descriptionTextarea.value = data.collage.description;
                 state.description = data.collage.description;
             }
+            if (data.collage && Array.isArray(data.collage.phases)) {
+                state.phases = data.collage.phases.slice();
+            }
         } catch (e) {
             console.error('Error loading saved data:', e);
         }
@@ -181,7 +219,7 @@ function loadSavedData() {
 
 function handleBack() {
     // Save current state before leaving
-    if (state.description.length > 0) {
+    if (state.description.length > 0 || state.phases.length > 0) {
         saveData();
     }
     window.location.href = CONFIG.backUrl;

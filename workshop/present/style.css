@@ -838,6 +838,7 @@ html, body {
 #legend-container .lg-css-row{display:flex;align-items:center;gap:8px;font-size:.85em;margin:3px 0;}
 #legend-container .lg-swatch{width:16px;height:16px;border-radius:3px;display:inline-block;border:1px solid #ccc;}
 #legend-container img{max-width:100%;}
+#legend-container .lg-safety-note{font-size:.82em;color:#b0503a;background:#fff4ef;border-radius:8px;padding:7px 10px;margin-bottom:12px;line-height:1.5;}
 #legend-container .legend-empty{color:#999;font-size:.85em;}
 /* 「?」情報ボタン */
 .haz-info{margin-left:auto;width:22px;height:22px;border-radius:50%;border:1px solid #ccc;background:#fff;color:#888;font-weight:bold;cursor:pointer;flex:none;}
@@ -848,6 +849,7 @@ html, body {
 #3d-btn.disabled{opacity:.45;cursor:not-allowed;}
 /* 地震グループの外部リンク */
 .ext-link{display:block;padding:10px 12px;background:#f4f1e9;border-radius:8px;color:#4f8b80;font-weight:bold;text-decoration:none;font-size:.9em;line-height:1.5;}
+.fopt-head{font-size:.9em;font-weight:bold;margin:10px 0 6px}
 .ext-link small{display:block;color:#999;font-weight:normal;font-size:.8em;margin-top:3px;}
 
 /* ===== パネルを地図の上に確実に出す（Leaflet移行の重なり修正） ===== */

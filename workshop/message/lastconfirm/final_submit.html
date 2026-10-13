@@ -41,7 +41,7 @@
 
             <div class="summary-grid">
                 <div class="summary-card">
-                    <div class="summary-head"><h3 class="summary-label">🗺️ 対象地点</h3><button type="button" class="edit-btn" data-edit="location">✏️ 修正する</button></div>
+                    <div class="summary-head"><h3 class="summary-label">🗺️ 対象地点／区域</h3><button type="button" class="edit-btn" data-edit="location">✏️ 修正する</button></div>
                     <div class="summary-editor" id="editor-location" style="display:none;"></div>
                     <div id="summary-location" class="summary-value">読込中...</div>
                     <div id="summary-map" class="summary-map"></div>
@@ -63,6 +63,12 @@
                     <div class="summary-head"><h3 class="summary-label">✂️ コラージュ作品の意図</h3><button type="button" class="edit-btn" data-edit="collage">✏️ 修正する</button></div>
                     <div class="summary-editor" id="editor-collage" style="display:none;"></div>
                     <div id="summary-collage" class="summary-value">読込中...</div>
+                </div>
+
+                <div class="summary-card">
+                    <div class="summary-head"><h3 class="summary-label">⏱️ 防災行動のタイミング</h3><button type="button" class="edit-btn" data-edit="phases">✏️ 修正する</button></div>
+                    <div class="summary-editor" id="editor-phases" style="display:none;"></div>
+                    <div id="summary-phases" class="summary-value">読込中...</div>
                 </div>
                 
                 <div class="summary-card">
@@ -141,6 +147,6 @@
     </div>
 
     <!-- Scripts -->
-    <script src="./final_submit_script.js?v=3.1.0"></script>
+    <script src="./final_submit_script.js?v=3.2.0"></script>
 </body>
 </html>

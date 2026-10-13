@@ -7,7 +7,7 @@
 
   <!-- ▼ Leaflet（同梱・外部依存なし） -->
   <link rel="stylesheet" href="./leaflet.css">
-  <link rel="stylesheet" href="./style.css?v=20261007">
+  <link rel="stylesheet" href="./style.css?v=20261013">
 </head>
 <body>
 
@@ -120,13 +120,14 @@
             <button type="button" class="haz-info" data-k="flood_l2">?</button>
           </div>
           <div class="filter-option">
-            <span><input type="checkbox" id="haz-tsunami"><label for="haz-tsunami">津波</label></span>
-            <button type="button" class="haz-info" data-k="tsunami">?</button>
-          </div>
-          <div class="filter-option">
             <span><input type="checkbox" id="haz-hightide"><label for="haz-hightide">高潮</label></span>
             <button type="button" class="haz-info" data-k="hightide">?</button>
           </div>
+          <div class="fopt-head">内水氾濫</div>
+          <a class="ext-link" href="https://wwwm.city.yokohama.lg.jp/yokohama/Map?mid=65&amp;mpx=139.62630111702703&amp;mpy=35.536158445033394&amp;mps=10000&amp;mtp=dm&amp;gprj=3" target="_blank" rel="noopener">
+            🔗 横浜市の「わいわい防災マップ」を見る
+            <small>下水道や水路からあふれる内水氾濫の浸水想定を確認できます（外部サイト）</small>
+          </a>
         </div>
       </div>
 
@@ -141,11 +142,15 @@
       </div>
 
       <div id="group-jishin" class="hazard-group">
-        <div class="hazard-group-header">地震・液状化・焼失棟数</div>
+        <div class="hazard-group-header">地震</div>
         <div class="hazard-group-content">
-          <a class="ext-link" href="https://wwwm.city.yokohama.lg.jp/yokohama/Map?mid=62&mpx=139.62630111702703&mpy=35.536158445033394&mps=10000&mtp=dm&gprj=3" target="_blank" rel="noopener">
-            🔗 わいわい防災マップ（横浜市）で見る
-            <small>南海トラフ巨大地震の震度・液状化・焼失棟数（地震火災）は、横浜市の防災マップで確認できます（外部サイト）</small>
+          <div class="filter-option">
+            <span><input type="checkbox" id="haz-tsunami"><label for="haz-tsunami">津波</label></span>
+            <button type="button" class="haz-info" data-k="tsunami">?</button>
+          </div>
+          <a class="ext-link" href="https://wwwm.city.yokohama.lg.jp/yokohama/Map?mid=6&amp;mpx=139.62630111702703&amp;mpy=35.536158445033394&amp;mps=10000&amp;mtp=dm&amp;gprj=3" target="_blank" rel="noopener">
+            🔗 横浜市の「わいわい防災マップ」を見る
+            <small>震度・液状化危険度・地震火災（焼失棟数）・津波を確認できます（外部サイト）</small>
           </a>
         </div>
       </div>
@@ -158,7 +163,7 @@
 
   <!-- ▼ Leaflet 本体（同梱） -->
   <script src="./leaflet.js"></script>
-  <script src="./script.js?v=20261007"></script>
+  <script src="./script.js?v=20261013"></script>
 
   <div id="tutorial-overlay" class="tutorial-overlay" style="display: none;">
     <div class="tutorial-card">

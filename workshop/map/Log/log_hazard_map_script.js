@@ -26,9 +26,9 @@ const CONFIG = {
         '高潮',
         '津波',
         '土砂災害（急傾斜地の崩壊）',
-        '液状化に関わる低地（参考）',
+        '液状化危険度',
         '地震の揺れ（震度）',
-        '地震火災（延焼）'
+        '地震火災（焼失棟数）'
     ]
 };
 
@@ -246,7 +246,7 @@ function confirmLocation() {
     }).addTo(state.map);
     
     // Update UI
-    elements.mapInstruction.textContent = '✓ 地点が確定されました';
+    elements.mapInstruction.textContent = '✓ 地点／区域が確定されました';
     elements.locationConfirmation.style.display = 'none';
     elements.locationConfirmed.style.display = 'block';
     elements.confirmedCoords.textContent = `緯度: ${state.confirmedLocation.lat.toFixed(6)}, 経度: ${state.confirmedLocation.lon.toFixed(6)}`;
@@ -360,7 +360,7 @@ function loadSavedData() {
                         state.map.setView([state.confirmedLocation.lat, state.confirmedLocation.lon], CONFIG.defaultZoom);
                         
                         // Update UI
-                        elements.mapInstruction.textContent = '✓ 地点が確定されました';
+                        elements.mapInstruction.textContent = '✓ 地点／区域が確定されました';
                         elements.locationConfirmed.style.display = 'block';
                         elements.confirmedCoords.textContent = `緯度: ${state.confirmedLocation.lat.toFixed(6)}, 経度: ${state.confirmedLocation.lon.toFixed(6)}`;
                     }

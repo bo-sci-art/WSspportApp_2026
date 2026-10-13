@@ -314,3 +314,39 @@ body {
 html, body { height: auto !important; min-height: 100vh; overflow-y: auto !important; }
 .container { height: auto !important; min-height: 100vh; overflow: visible !important; }
 .content { overflow: visible !important; }
+
+/* ============================================
+   防災行動のタイミング（2026/10 追加）
+   ============================================ */
+.content { overflow-y: auto; }
+.phase-section { flex: 0 0 auto; }
+.section-description {
+    font-size: clamp(0.8rem, 1.2vw, 0.9rem);
+    color: var(--color-text-secondary);
+    margin-bottom: 0.75rem;
+}
+.phase-options {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+}
+.phase-option {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 0.5rem;
+    align-items: center;
+    padding: 0.75rem 0.9rem;
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.phase-option:hover { border-color: var(--color-primary); background: #f0f8f9; }
+.phase-option.selected { border-color: var(--color-primary); background: #e6f4f6; box-shadow: var(--shadow-sm); }
+.phase-option input { width: 18px; height: 18px; accent-color: var(--color-primary); cursor: pointer; grid-row: span 2; }
+.phase-name { font-weight: 700; font-size: 1rem; }
+.phase-desc { font-size: 0.78rem; color: var(--color-text-secondary); line-height: 1.4; }
+@media (max-width: 640px) {
+    .phase-options { grid-template-columns: 1fr; }
+}

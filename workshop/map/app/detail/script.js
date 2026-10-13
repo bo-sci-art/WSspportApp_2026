@@ -16,25 +16,25 @@ const hazards = {
   flood_l2: {
     layer: L.tileLayer(HZ+"01_flood_l2_shinsuishin_data/{z}/{x}/{y}.png", {maxZoom:17, opacity:.7, attribution:"重ねるハザードマップ（国土地理院）"}),
     name: "洪水（外水氾濫）",
-    desc: "川（河川）の水が、想定し得る最大規模の大雨であふれ、堤防を越えたり壊れたりして街に流れ込む浸水です（外水氾濫）。「想定最大規模」の降雨をもとにした“もっとも深く浸かる場合”を示します。色が濃いほど深く浸かります。",
+    desc: "・想定最大規模の大雨により、川の水が堤防を越えてまちへ流れ込む浸水です。<br>・発生しえるもっとも深い場合を示しています。<br>・下水があふれる「内水氾濫」とは発生原因が異なります。",
     legend: "shinsui"
   },
   tsunami: {
     layer: L.tileLayer(HZ+"04_tsunami_newlegend_data/{z}/{x}/{y}.png", {maxZoom:17, opacity:.7, attribution:"重ねるハザードマップ（国土地理院）"}),
     name: "津波",
-    desc: "海底で起きる地震などの地殻変動によって海水が持ち上げられ、大きな波となって陸へ押し寄せる浸水です。原因は「海の地震」で、高潮とは原因が異なります。色が濃いほど深く浸かります。",
+    desc: "・地震などの地殻変動で発生した海面の変化が大波となって押し寄せる浸水です。<br>・台風などが原因で海面が上昇する「高潮」とは発生原因が異なります。",
     legend: "shinsui"
   },
   hightide: {
     layer: L.tileLayer(HZ+"03_hightide_l2_shinsuishin_data/{z}/{x}/{y}.png", {maxZoom:17, opacity:.7, attribution:"重ねるハザードマップ（国土地理院）"}),
     name: "高潮",
-    desc: "台風や発達した低気圧が近づくとき、気圧が低いことで海面が持ち上がる“吸い上げ効果”と、強い風で海水が海岸へ吹き寄せられる“吹き寄せ効果”によって潮位が大きく上昇し、海水があふれる浸水です（気象庁）。原因は「台風・気象」で、地震が原因の津波とは別物です。",
+    desc: "・台風などによる気圧低下と強風で海面が上昇し、海水が陸へ流れ込む浸水です。<br>・地震などの地殻変動が原因で発生する「津波」とは発生原因が異なります。",
     legend: "shinsui"
   },
   kyukei: {
     layer: L.tileLayer(HZ+"05_kyukeishakeikaikuiki/{z}/{x}/{y}.png", {maxZoom:17, opacity:.7, attribution:"重ねるハザードマップ（国土地理院）"}),
     name: "土砂災害（急傾斜地の崩壊）",
-    desc: "傾斜度30度以上・高さ5m以上の急な斜面（がけ）が、大雨や地震などで崩れ落ちる“がけ崩れ”の危険がある区域です。黄色＝土砂災害警戒区域（生命・身体に危害のおそれ）、赤＝土砂災害特別警戒区域（建物の損壊など著しい危害のおそれ／より危険）。",
+    desc: "大雨や地震でがけ（傾斜30度以上・高さ5m以上の急斜面）が崩れ落ち、生命や身体に危害が生じるおそれがある区域です。",
     legend: "dosha"
   }
 };
@@ -106,7 +106,7 @@ function depthGuideSVG(){
   };
   s += person(30, g.adultM) + person(41, g.childM);
   // 家（2階建て：軒の高さ・屋根の高さ）
-  const hx1 = 52, hx2 = W - 4, ey = y(g.eaveM), ry = y(g.houseM), fy = y(2.6);
+  const hx1 = 52, hx2 = W - 4, ey = y(g.eaveM), ry = y(g.houseM), fy = y(3.0);   // 2階床面：手引き「日本の二階建て家屋の床面高は3.0m以上」
   s += '<polygon points="'+(hx1-3)+','+ey+' '+((hx1+hx2)/2)+','+ry+' '+(hx2+3)+','+ey+'" fill="'+ink+'"/>';
   s += '<rect x="'+hx1+'" y="'+ey+'" width="'+(hx2-hx1)+'" height="'+(ground-ey)+'" fill="none" stroke="'+ink+'" stroke-width="2"/>';
   s += '<line x1="'+hx1+'" x2="'+hx2+'" y1="'+fy+'" y2="'+fy+'" stroke="'+ink+'" stroke-width="1.2"/>';
@@ -122,13 +122,13 @@ function depthGuideSVG(){
 const LEGEND_GRAPHIC = {
   shinsui: '<div style="display:grid;grid-template-columns:minmax(0,1fr) 116px;gap:6px;align-items:start"><img style="width:100%;height:auto;max-width:none;display:block" src="https://disaportal.gsi.go.jp/hazardmap/copyright/img/shinsui_legend3.png" alt="浸水深凡例" onerror="this.replaceWith(document.createTextNode(\'（公式凡例画像を読み込めませんでした）\'))">' + depthGuideSVG() + '</div>'
          + '<div class="lg-guide-note">右の図は高さの目安です（大人' + DEPTH_GUIDE.adultM + 'm・子ども' + DEPTH_GUIDE.childM + 'm・2階建ての家 約' + DEPTH_GUIDE.houseM + 'm）</div>',
-  dosha: '<div class="lg-css-row"><span class="lg-swatch" style="background:#ffe600"></span>警戒区域（イエロー）</div><div class="lg-css-row"><span class="lg-swatch" style="background:#ff5a3c"></span>特別警戒区域（レッド）</div>'
+  dosha: '<div class="lg-css-row"><span class="lg-swatch" style="background:#fae600"></span>土砂災害警戒区域（イエローゾーン）：危害が生じるおそれあり。</div><div class="lg-css-row"><span class="lg-swatch" style="background:#fa2800"></span>土砂災害特別警戒区域（レッドゾーン）：著しい危害が生じるおそれあり。</div>'
 };
 function refreshLegend(){
   const box = document.getElementById("legend-box");
   const active = Object.keys(hazards).filter(k => map.hasLayer(hazards[k].layer));
   if (!active.length){ box.innerHTML = '<div class="legend-empty">災害を選ぶと、説明と凡例が表示されます</div>'; return; }
-  box.innerHTML = active.map(k => {
+  box.innerHTML = '<div class="lg-safety-note">※色がついていない場所も安全とは限りません。想定を超える災害が起きることもあります。</div>' + active.map(k => {
     const h = hazards[k];
     return '<div class="legend-item" id="lg-' + k + '">' +
              '<div class="lg-name">' + h.name + '</div>' +
