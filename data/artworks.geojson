@@ -720,6 +720,30 @@
         ],
         "status": "approved"
       }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.64546207627734,
+          35.52547469302701
+        ]
+      },
+      "properties": {
+        "id": "63",
+        "field_23": "災害時",
+        "field_24": "津波, 高潮",
+        "field_25": "Test",
+        "Message": "Test",
+        "collage": "Test",
+        "Mabling": "Test",
+        "creationDate": "2026-10-13",
+        "images": [
+          "images/63_1.jpg"
+        ],
+        "status": "approved"
+      }
     }
   ]
 }
