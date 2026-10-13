@@ -418,3 +418,25 @@ main { overflow: hidden; }
 #palette-select option {
   color: #0f172a;
 }
+
+/* ===== 色の選択欄の見た目をパレット選択欄とそろえる（2026/10） ===== */
+.color-picker input[type="color"] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 42px;
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(2, 6, 23, 0.06), 0 8px 24px rgba(2, 6, 23, 0.06);
+  cursor: pointer;
+}
+.color-picker input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.color-picker input[type="color"]::-webkit-color-swatch { border: none; border-radius: 7px; }
+.color-picker input[type="color"]::-moz-color-swatch { border: none; border-radius: 7px; }
+/* 色の丸ボタン：選択枠がパネルからはみ出さないよう内側に余白 */
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; padding: 5px; }
+/* 透明度スライダーを他の部品と同じ幅・位置に */
+#alpha { display: block; width: 100%; margin: 0; }

@@ -459,8 +459,15 @@ body {
     font-size: 0.9rem;
 }
 
-/* ===== 次へボタン到達性: ページ全体をスクロール可能に（固定100vh+overflow:hiddenの上書き） ===== */
-html, body { height: auto !important; min-height: 100vh; overflow-y: auto !important; }
-.container { height: auto !important; min-height: 100vh; overflow: visible !important; }
-.content { overflow: visible !important; }
-.map-container { flex: none !important; height: 55vh; min-height: 320px; }
+
+/* ===== 画面固定レイアウト（2026/10）：タブレット縦・スマホでは地図の高さを確保 ===== */
+@media screen and (max-width: 1024px) {
+    .content { grid-template-rows: auto minmax(300px, 1fr) !important; }
+    .hazard-selection { grid-template-columns: 1fr 1fr !important; overflow: visible !important; }
+    .map-container { flex: 1 1 auto !important; min-height: 220px !important; height: auto !important; }
+}
+/* 横向きタブレット（幅900〜1024px）は PC と同じ左右2列にして、スクロールなしで収める */
+@media screen and (min-width: 900px) and (max-width: 1024px) and (orientation: landscape) {
+    .content { grid-template-columns: 0.9fr 1.1fr !important; grid-template-rows: 1fr !important; }
+    .hazard-selection { grid-template-columns: 1fr !important; }
+}

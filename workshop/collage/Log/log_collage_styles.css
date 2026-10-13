@@ -310,15 +310,10 @@ body {
     }
 }
 
-/* ===== 次へボタン到達性: ページ全体をスクロール可能に（固定100vh+overflow:hiddenの上書き） ===== */
-html, body { height: auto !important; min-height: 100vh; overflow-y: auto !important; }
-.container { height: auto !important; min-height: 100vh; overflow: visible !important; }
-.content { overflow: visible !important; }
 
 /* ============================================
    防災行動のタイミング（2026/10 追加）
    ============================================ */
-.content { overflow-y: auto; }
 .phase-section { flex: 0 0 auto; }
 .section-description {
     font-size: clamp(0.8rem, 1.2vw, 0.9rem);
@@ -349,4 +344,14 @@ html, body { height: auto !important; min-height: 100vh; overflow-y: auto !impor
 .phase-desc { font-size: 0.78rem; color: var(--color-text-secondary); line-height: 1.4; }
 @media (max-width: 640px) {
     .phase-options { grid-template-columns: 1fr; }
+}
+
+/* ===== 画面固定レイアウト（2026/10）：説明欄は残りの高さに合わせて伸縮 ===== */
+.content > .input-section:first-child { flex: 1 0 auto; }
+.hint-text { padding: 0.6rem 0.9rem; margin-bottom: 0.6rem; }
+.hint-text p { font-size: 0.85rem; margin-bottom: 0.1rem; }
+@media (max-height: 800px) {
+    .phase-option { padding: 0.5rem 0.7rem; }
+    .phase-desc { font-size: 0.72rem; }
+    .character-count { margin-top: 2px; }
 }
