@@ -744,6 +744,30 @@
         ],
         "status": "approved"
       }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.64828969055165,
+          35.55169389691617
+        ]
+      },
+      "properties": {
+        "id": "64",
+        "field_23": "災害時",
+        "field_24": "内水氾濫, 津波, 液状化危険度, 地震火災（焼失棟数）, 地震の揺れ（震度）, 土砂災害（急傾斜地の崩壊）, 高潮, 洪水（外水氾濫）",
+        "field_25": "あ",
+        "Message": "ああああ",
+        "collage": "ああああ",
+        "Mabling": "ああああ",
+        "creationDate": "2026-10-15",
+        "images": [
+          "images/64_1.jpg"
+        ],
+        "status": "approved"
+      }
     }
   ]
 }
