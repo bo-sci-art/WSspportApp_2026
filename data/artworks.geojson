@@ -768,6 +768,30 @@
         ],
         "status": "approved"
       }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.63636927306652,
+          35.53712786824348
+        ]
+      },
+      "properties": {
+        "id": "65",
+        "field_23": "災害時",
+        "field_24": "液状化危険度",
+        "field_25": "Test",
+        "Message": "Test",
+        "collage": "Text",
+        "Mabling": "Test",
+        "creationDate": "2026-10-16",
+        "images": [
+          "images/65_1.jpg"
+        ],
+        "status": "approved"
+      }
     }
   ]
 }
