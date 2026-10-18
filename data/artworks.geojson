@@ -936,6 +936,30 @@
         ],
         "status": "approved"
       }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.61573506612135,
+          35.536252227890934
+        ]
+      },
+      "properties": {
+        "id": "72",
+        "field_23": "災害時",
+        "field_24": "洪水（外水氾濫）, 内水氾濫, 土砂災害（急傾斜地の崩壊）, 地震の揺れ（震度）, 地震火災（焼失棟数）",
+        "field_25": "TOMO",
+        "Message": "その時どうする？",
+        "collage": "災害時の時の表現。家族が離れ離れ。避難場所に行く\n災害時、助け合う事",
+        "Mabling": "川の氾濫の危険性、家族の命、災害の怖さ、備えをイメージしました。",
+        "creationDate": "2026-10-18",
+        "images": [
+          "images/72_1.jpg"
+        ],
+        "status": "approved"
+      }
     }
   ]
 }
