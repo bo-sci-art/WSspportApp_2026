@@ -912,6 +912,30 @@
         ],
         "status": "approved"
       }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.51009172114533,
+          35.549128106309624
+        ]
+      },
+      "properties": {
+        "id": "71",
+        "field_23": "事前, 災害時",
+        "field_24": "洪水（外水氾濫）, 内水氾濫",
+        "field_25": "龍馬の休日",
+        "Message": "逃げよう",
+        "collage": "逃げる方向を表現しました",
+        "Mabling": "周辺の水害時の様子を表現しました",
+        "creationDate": "2026-10-18",
+        "images": [
+          "images/71_1.jpg"
+        ],
+        "status": "approved"
+      }
     }
   ]
 }
